@@ -25,6 +25,25 @@ research report in Streamlit.
 5. **Insight Generation Agent** proposes hypotheses and emerging trends.
 6. **Report Builder Agent** compiles a structured Markdown report.
 
+## Simple flow diagram
+
+```mermaid
+flowchart TD
+    A[User research question] --> B[Streamlit UI]
+    B --> C[Query Planning Agent]
+    C --> D[Contextual Retriever Agent]
+    D --> E[Tavily web search]
+    D --> F[Uploaded documents]
+    E --> G[FAISS vector retrieval]
+    F --> G
+    G --> H[Source Validator Agent]
+    H --> I[Critical Analysis Agent]
+    I --> J[Insight Generation Agent]
+    J --> K[Report Builder Agent]
+    K --> L[Markdown research report]
+    L --> M[View or download in Streamlit]
+```
+
 ## Tech stack
 
 - Python
