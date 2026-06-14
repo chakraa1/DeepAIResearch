@@ -98,8 +98,20 @@ def load_config_from_ui() -> ResearchConfig:
             help="Optional. Used by the Contextual Retriever Agent for web search.",
         )
         model = st.text_input("OpenAI model", value=model)
-        max_web_results = st.slider("Max web results per investigation", 1, 12, config.max_web_results)
-        max_retrieval_docs = st.slider("FAISS context chunks", 3, 16, config.max_retrieval_docs)
+        max_web_results = st.slider("Max web results per investigation", 4, 16, _clamp(config.max_web_results, 4, 16))
+        max_retrieval_docs = st.slider(
+            "FAISS top-k chunks sent to LLM agents",
+            1,
+            10,
+            _clamp(config.max_retrieval_docs, 1, 10),
+            help="Defaults to 3 to control token usage between retrieval and LLM agents.",
+        )
+        validator_top_k = st.slider("Source validator top-k", 1, 10, _clamp(config.validator_top_k, 1, 10))
+        critical_limit = st.slider("Critical analysis word limit", 80, 300, _clamp(config.critical_analysis_word_limit, 80, 300))
+        insight_limit = st.slider("Insight generation word limit", 80, 300, _clamp(config.insight_word_limit, 80, 300))
+        report_min_words = st.slider("Report minimum words", 100, 300, _clamp(config.report_min_words, 100, 300))
+        report_max_words = st.slider("Report maximum words", 200, 400, _clamp(config.report_max_words, 200, 400))
+        report_max_words = max(report_max_words, report_min_words)
 
     if openai_key:
         os.environ["OPENAI_API_KEY"] = openai_key
@@ -112,6 +124,11 @@ def load_config_from_ui() -> ResearchConfig:
         openai_model=model,
         max_web_results=max_web_results,
         max_retrieval_docs=max_retrieval_docs,
+        validator_top_k=validator_top_k,
+        critical_analysis_word_limit=critical_limit,
+        insight_word_limit=insight_limit,
+        report_min_words=report_min_words,
+        report_max_words=report_max_words,
     )
 
 
@@ -132,6 +149,9 @@ def render_sidebar(config: ResearchConfig) -> None:
         st.subheader("Runtime Status")
         st.write("LLM:", "enabled" if config.llm_enabled else "local fallback")
         st.write("Web search:", "enabled" if config.web_search_enabled else "local/upload-only")
+        st.write("FAISS top-k:", config.max_retrieval_docs)
+        st.write("Validator top-k:", config.validator_top_k)
+        st.write("Report words:", f"{config.report_min_words}-{config.report_max_words}")
 
 
 def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
@@ -143,6 +163,7 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
     log_container = st.container(border=True)
     final_state = None
     node_count = len(AGENT_LABELS)
+    shown_logs = 0
 
     with st.spinner("Agents are collaborating on the investigation..."):
         for index, (node_name, state) in enumerate(
@@ -155,8 +176,10 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
             status.success(f"{label} completed")
             with log_container:
                 st.markdown(f"**{label}**")
-                for log in state.get("logs", [])[-2:]:
+                logs = state.get("logs", [])
+                for log in logs[shown_logs:]:
                     st.write(log)
+                shown_logs = len(logs)
 
     if final_state is None:
         st.error("The workflow did not produce a result.")
@@ -227,6 +250,10 @@ def _streamlit_secrets() -> dict[str, str]:
         return dict(st.secrets)
     except Exception:
         return {}
+
+
+def _clamp(value: int, minimum: int, maximum: int) -> int:
+    return max(minimum, min(value, maximum))
 
 
 if __name__ == "__main__":

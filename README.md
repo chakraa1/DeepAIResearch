@@ -8,22 +8,29 @@ research report in Streamlit.
 ## What it demonstrates
 
 - **Agent collaboration** with a LangGraph state machine.
-- **Contextual retrieval** from Tavily web results and uploaded local documents.
+- **Parallel contextual retrieval** from Tavily source lanes and uploaded local documents.
 - **Retrieval augmented synthesis** using FAISS and LangChain document utilities.
 - **Critical analysis** that flags source credibility, caveats, and contradictions.
 - **Insight generation** for hypotheses, trends, and follow-up questions.
 - **Report building** into a citation-oriented Markdown research report.
+- **Cached YAML system prompts** with explicit agent roles.
 - **Offline demo fallback** when API keys are unavailable.
 
 ## Agent team
 
 1. **Query Planning Agent** decomposes the topic into multi-hop sub-questions.
-2. **Contextual Retriever Agent** pulls web data with Tavily and local uploaded
-   files, then selects relevant chunks with FAISS.
-3. **Source Validator Agent** rates credibility, relevance, and caveats.
-4. **Critical Analysis Agent** summarizes findings and highlights contradictions.
-5. **Insight Generation Agent** proposes hypotheses and emerging trends.
-6. **Report Builder Agent** compiles a structured Markdown report.
+2. **Contextual Retriever Agent** runs Tavily searches in parallel across
+   research papers, news articles, reports, and APIs. It adds uploaded files,
+   then passes the configurable FAISS top-k results to LLM agents. The default
+   top-k is 3.
+3. **Source Validator Agent** validates the top retrieved results with the LLM
+   and heuristic provenance checks. The default validator top-k is 3.
+4. **Critical Analysis Agent** summarizes findings, contradictions, and source
+   quality with a configurable 200-word default limit.
+5. **Insight Generation Agent** proposes hypotheses and trends with a
+   configurable 200-word default limit.
+6. **Report Builder Agent** compiles a 200-300 word Markdown report and enforces
+   human-tone, hook, source-link, and formatting rules.
 
 ## Simple flow diagram
 
@@ -32,16 +39,23 @@ flowchart TD
     A[User research question] --> B[Streamlit UI]
     B --> C[Query Planning Agent]
     C --> D[Contextual Retriever Agent]
-    D --> E[Tavily web search]
+    D --> E1[Research papers search]
+    D --> E2[News search]
+    D --> E3[Reports search]
+    D --> E4[APIs and datasets search]
     D --> F[Uploaded documents]
-    E --> G[FAISS vector retrieval]
+    E1 --> G[FAISS top-k retrieval]
+    E2 --> G
+    E3 --> G
+    E4 --> G
     F --> G
-    G --> H[Source Validator Agent]
-    H --> I[Critical Analysis Agent]
-    I --> J[Insight Generation Agent]
-    J --> K[Report Builder Agent]
-    K --> L[Markdown research report]
-    L --> M[View or download in Streamlit]
+    G --> H[Top 3 context to LLM agents]
+    H --> I[Source Validator Agent]
+    I --> J[Critical Analysis Agent]
+    J --> K[Insight Generation Agent]
+    K --> L[Report Builder Agent]
+    L --> M[Rules-checked Markdown report]
+    M --> N[View or download in Streamlit]
 ```
 
 ## Tech stack
@@ -53,6 +67,7 @@ flowchart TD
 - FAISS vector database
 - Tavily web search
 - OpenAI chat and embedding models when configured
+- YAML system prompts loaded with process-level caching
 
 ## Quick start
 
@@ -69,6 +84,13 @@ Edit `.env` and add keys if available:
 OPENAI_API_KEY=your_openai_key
 TAVILY_API_KEY=your_tavily_key
 OPENAI_MODEL=gpt-4o-mini
+MAX_WEB_RESULTS=8
+MAX_RETRIEVAL_DOCS=3
+VALIDATOR_TOP_K=3
+CRITICAL_ANALYSIS_WORD_LIMIT=200
+INSIGHT_WORD_LIMIT=200
+REPORT_MIN_WORDS=200
+REPORT_MAX_WORDS=300
 ```
 
 Run the app:
@@ -141,8 +163,10 @@ pytest
 │   ├── embeddings.py
 │   ├── llm.py
 │   ├── models.py
+│   ├── prompts.py
 │   ├── retrieval.py
 │   ├── search.py
+│   ├── system_prompts.yaml
 │   └── workflow.py
 └── tests/
     └── test_offline_workflow.py

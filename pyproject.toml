@@ -18,6 +18,7 @@ dependencies = [
     "faiss-cpu",
     "tavily-python",
     "python-dotenv",
+    "PyYAML",
     "pydantic",
     "pypdf",
     "beautifulsoup4",
@@ -29,6 +30,9 @@ dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+deep_researcher = ["system_prompts.yaml"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

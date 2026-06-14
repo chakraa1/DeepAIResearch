@@ -5,7 +5,8 @@ import pytest
 from deep_researcher.config import ResearchConfig
 from deep_researcher.embeddings import HashEmbeddings
 from deep_researcher.models import SourceDocument
-from deep_researcher.search import tavily_search
+from deep_researcher.prompts import get_system_prompt
+from deep_researcher.search import parallel_tavily_search, tavily_search
 from deep_researcher.workflow import DeepResearchWorkflow
 
 
@@ -29,6 +30,22 @@ def test_tavily_search_returns_notice_without_key() -> None:
     assert "TAVILY_API_KEY" in results[0].content
 
 
+def test_parallel_tavily_search_runs_all_source_lanes_without_key() -> None:
+    config = ResearchConfig(tavily_api_key=None)
+
+    results = parallel_tavily_search("AI safety", config)
+
+    lanes = {result.metadata["source_lane"] for result in results}
+    assert lanes == {"research_papers", "news_articles", "reports", "apis"}
+
+
+def test_cached_yaml_prompt_includes_explicit_role() -> None:
+    prompt = get_system_prompt("report_builder")
+
+    assert "Role: Report Builder Agent" in prompt
+    assert "SOURCE_LINKS" in prompt
+
+
 def test_offline_workflow_generates_report_from_local_sources() -> None:
     pytest.importorskip("faiss")
     pytest.importorskip("langgraph")
@@ -37,7 +54,8 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
         openai_api_key=None,
         tavily_api_key=None,
         max_web_results=1,
-        max_retrieval_docs=4,
+        max_retrieval_docs=3,
+        validator_top_k=3,
     )
     workflow = DeepResearchWorkflow(config)
     documents = [
@@ -58,6 +76,8 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     )
 
     assert result["report"]
-    assert "Deep Research Report" in result["report"] or "Executive Summary" in result["report"]
+    assert result["report"].splitlines()[0].startswith("**")
+    assert "## SOURCES" in result["report"]
+    assert len(result["retrieved_context"]) <= 3
     assert result["retrieved_context"]
-    assert result["logs"][-1] == "Report Builder Agent compiled the final report."
+    assert result["logs"][-1] == "Report Builder Agent completed: compiled the final rules-checked report."

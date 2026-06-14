@@ -39,8 +39,10 @@ class ResearchState(TypedDict, total=False):
     query: str
     local_documents: list[SourceDocument]
     sub_questions: list[str]
+    tavily_sources: list[SourceDocument]
     retrieved_context: list[SourceDocument]
     source_assessments: list[SourceAssessment]
+    source_validation_summary: str
     synthesis: str
     contradictions: list[str]
     insights: list[str]

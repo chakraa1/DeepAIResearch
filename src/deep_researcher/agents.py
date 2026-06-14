@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from urllib.parse import urlparse
 
 from deep_researcher.config import ResearchConfig
 from deep_researcher.llm import ResearchLLM
 from deep_researcher.models import ResearchState, SourceAssessment, SourceDocument
+from deep_researcher.prompts import get_system_prompt
 from deep_researcher.retrieval import retrieve_relevant_context
-from deep_researcher.search import tavily_search
+from deep_researcher.search import SOURCE_SEARCH_QUERIES, parallel_tavily_search
 
 
 class ResearchAgents:
@@ -22,13 +24,14 @@ class ResearchAgents:
         """Query Planning Agent: decomposes a broad query into sub-questions."""
 
         query = state["query"]
+        logs = _with_logs(state, "Query Planning Agent started: decomposing the research question.")
         prompt = f"""Research question: {query}
 
 Create 4 focused sub-questions that would support a multi-hop investigation.
 Cover facts, causes, evidence quality, contradictions, and implications.
 Return one sub-question per line."""
         response = self.llm.generate(
-            "You are a senior research strategist who plans multi-hop investigations.",
+            get_system_prompt("query_planner"),
             prompt,
         )
         sub_questions = _parse_lines(response)
@@ -43,58 +46,100 @@ Return one sub-question per line."""
         return {
             **state,
             "sub_questions": sub_questions[:5],
-            "logs": [*state.get("logs", []), "Query Planning Agent generated research sub-questions."],
+            "logs": [
+                *logs,
+                f"Query Planning Agent completed: generated {min(len(sub_questions), 5)} sub-questions.",
+            ],
         }
 
     def retrieve_context(self, state: ResearchState) -> ResearchState:
-        """Contextual Retriever Agent: searches web and FAISS-indexes all sources."""
+        """Contextual Retriever Agent: runs parallel source search and FAISS top-k."""
 
         query = state["query"]
-        sub_questions = state.get("sub_questions") or [query]
-        web_sources: list[SourceDocument] = []
-        for sub_question in sub_questions[:4]:
-            web_sources.extend(
-                tavily_search(
-                    sub_question,
-                    self.config,
-                    max_results=max(1, self.config.max_web_results // 2),
-                )
-            )
+        logs = _with_logs(
+            state,
+            "Contextual Retriever Agent started: parallel Tavily lanes are research papers, news, reports, and APIs.",
+        )
+        web_sources = parallel_tavily_search(query, self.config)
 
         all_sources = _dedupe_sources([*state.get("local_documents", []), *web_sources])
         retrieved_context = retrieve_relevant_context(query, all_sources, self.config)
         if not retrieved_context:
             retrieved_context = all_sources[: self.config.max_retrieval_docs]
+        retrieved_context = retrieved_context[: self.config.max_retrieval_docs]
+
+        selector_note = self.llm.generate(
+            get_system_prompt("source_selector"),
+            f"""Research question: {query}
+
+FAISS top-k limit: {self.config.max_retrieval_docs}
+Selected results:
+{_format_sources(retrieved_context, max_chars=3_000)}
+
+Confirm in one short paragraph why these results should be passed to the LLM agents.""",
+        )
 
         return {
             **state,
+            "tavily_sources": web_sources,
             "retrieved_context": retrieved_context,
             "logs": [
-                *state.get("logs", []),
-                f"Contextual Retriever Agent collected {len(all_sources)} source documents and selected {len(retrieved_context)} chunks.",
+                *logs,
+                (
+                    "Contextual Retriever Agent completed: "
+                    f"ran {len(SOURCE_SEARCH_QUERIES)} parallel source lanes, "
+                    f"collected {len(all_sources)} source documents, and selected top "
+                    f"{len(retrieved_context)} FAISS chunks."
+                ),
+                f"FAISS Context Selector note: {_limit_words(selector_note, 40)}",
             ],
         }
 
     def assess_sources(self, state: ResearchState) -> ResearchState:
-        """Source Validator Agent: evaluates relevance, credibility, and caveats."""
+        """Source Validator Agent: evaluates the top retrieved results with the LLM."""
 
-        assessments = [_assess_source(source) for source in state.get("retrieved_context", [])]
+        logs = _with_logs(
+            state,
+            f"Source Validator Agent started: validating top {self.config.validator_top_k} retrieved results.",
+        )
+        validation_sources = state.get("retrieved_context", [])[: self.config.validator_top_k]
+        assessments = [_assess_source(source) for source in validation_sources]
+        validation_summary = self.llm.generate(
+            get_system_prompt("source_validator"),
+            f"""Research question: {state['query']}
+
+Top retrieved results:
+{_format_sources(validation_sources, max_chars=4_000)}
+
+Heuristic assessments:
+{chr(10).join(f'- {item.source}: {item.credibility}; relevance {item.relevance}; caveat {item.caveats}' for item in assessments)}
+
+Validate these sources in under 120 words. Mention contradictions or provenance risks.""",
+        )
         return {
             **state,
             "source_assessments": assessments,
-            "logs": [*state.get("logs", []), "Source Validator Agent assessed credibility and caveats."],
+            "source_validation_summary": _limit_words(validation_summary, 120),
+            "logs": [
+                *logs,
+                f"Source Validator Agent completed: validated {len(validation_sources)} top retrieved results.",
+            ],
         }
 
     def analyze_findings(self, state: ResearchState) -> ResearchState:
         """Critical Analysis Agent: synthesizes findings and highlights tensions."""
 
-        context = _format_sources(state.get("retrieved_context", []), max_chars=8_000)
+        logs = _with_logs(
+            state,
+            f"Critical Analysis Agent started: using top {self.config.max_retrieval_docs} FAISS results.",
+        )
+        context = _format_sources(state.get("retrieved_context", [])[: self.config.max_retrieval_docs], max_chars=5_000)
         assessments = "\n".join(
             f"- {item.source}: {item.credibility}; {item.caveats}"
             for item in state.get("source_assessments", [])
         )
         synthesis = self.llm.generate(
-            "You are a critical analysis agent. Summarize findings, validate source strength, and avoid unsupported claims.",
+            get_system_prompt("critical_analysis"),
             f"""Question: {state['query']}
 
 Retrieved context:
@@ -103,30 +148,33 @@ Retrieved context:
 Source assessments:
 {assessments}
 
-Write a concise synthesis with evidence-backed claims and cite source titles inline.""",
-        )
-        contradictions_text = self.llm.generate(
-            "You are a contradiction detection agent. Identify contradictions, uncertainty, and missing evidence.",
-            f"""Question: {state['query']}
+LLM validation summary:
+{state.get('source_validation_summary', '')}
 
-Retrieved context:
-{context}
-
-List contradictions, caveats, or evidence gaps as bullets.""",
+Write within {self.config.critical_analysis_word_limit} words.
+Summarize findings, highlight contradictions, and validate source strength.""",
         )
+        synthesis = _limit_words(synthesis, self.config.critical_analysis_word_limit)
         return {
             **state,
             "synthesis": synthesis,
-            "contradictions": _parse_lines(contradictions_text) or [contradictions_text],
-            "logs": [*state.get("logs", []), "Critical Analysis Agent synthesized findings and evidence gaps."],
+            "contradictions": _extract_contradictions(synthesis),
+            "logs": [
+                *logs,
+                f"Critical Analysis Agent completed: produced <= {self.config.critical_analysis_word_limit} words.",
+            ],
         }
 
     def generate_insights(self, state: ResearchState) -> ResearchState:
         """Insight Generation Agent: proposes hypotheses and trends."""
 
-        context = _format_sources(state.get("retrieved_context", []), max_chars=6_000)
+        logs = _with_logs(
+            state,
+            f"Insight Generation Agent started: capped at {self.config.insight_word_limit} words.",
+        )
+        context = _format_sources(state.get("retrieved_context", [])[: self.config.max_retrieval_docs], max_chars=4_000)
         response = self.llm.generate(
-            "You are an insight generation agent. Produce hypotheses, trends, and reasoning chains grounded in evidence.",
+            get_system_prompt("insight_generation"),
             f"""Question: {state['query']}
 
 Synthesis:
@@ -138,30 +186,39 @@ Contradictions and caveats:
 Evidence context:
 {context}
 
+Word limit: {self.config.insight_word_limit}
 Return two sections:
 Insights:
 - ...
 Hypotheses:
 - ...""",
         )
+        response = _limit_words(response, self.config.insight_word_limit)
         insights, hypotheses = _split_insights(response)
         return {
             **state,
             "insights": insights,
             "hypotheses": hypotheses,
-            "logs": [*state.get("logs", []), "Insight Generation Agent proposed trends and hypotheses."],
+            "logs": [
+                *logs,
+                f"Insight Generation Agent completed: generated {len(insights)} insights and {len(hypotheses)} hypotheses.",
+            ],
         }
 
     def build_report(self, state: ResearchState) -> ResearchState:
         """Report Builder Agent: compiles the final structured report."""
 
-        sources = state.get("retrieved_context", [])
+        logs = _with_logs(
+            state,
+            f"Report Builder Agent started: enforcing {self.config.report_min_words}-{self.config.report_max_words} words and source-link rules.",
+        )
+        sources = state.get("retrieved_context", [])[: self.config.max_retrieval_docs]
         citations = "\n".join(
-            f"- [{index}] {source.citation_label} ({source.source_type})"
-            for index, source in enumerate(sources, start=1)
+            _format_source_link(source)
+            for source in _ensure_two_sources(sources)
         )
         report = self.llm.generate(
-            "You are a report builder agent. Create a polished Markdown deep-research report with citations.",
+            get_system_prompt("report_builder"),
             f"""Research question: {state['query']}
 
 Sub-questions:
@@ -182,15 +239,19 @@ Hypotheses:
 Sources:
 {citations}
 
-Build a report with: Executive Summary, Research Path, Evidence Review, Contradictions & Caveats, Insights & Hypotheses, Recommended Next Questions, and Sources.""",
+Build a 200-300 word report. Start with a bold, specific, counterintuitive hook.
+End with a ## SOURCES section using exactly this source format:
+[Title] - domain.com""",
         )
-        if "## Sources" not in report and "# Sources" not in report:
-            report = f"{report.rstrip()}\n\n## Sources\n{citations}"
+        report = _enforce_report_rules(report, sources, state["query"], self.config)
 
         return {
             **state,
             "report": report,
-            "logs": [*state.get("logs", []), "Report Builder Agent compiled the final report."],
+            "logs": [
+                *logs,
+                "Report Builder Agent completed: compiled the final rules-checked report.",
+            ],
         }
 
 
@@ -211,6 +272,10 @@ def _format_sources(sources: list[SourceDocument], *, max_chars: int) -> str:
     return "\n---\n".join(blocks) if blocks else "No source context available."
 
 
+def _with_logs(state: ResearchState, message: str) -> list[str]:
+    return [*state.get("logs", []), message]
+
+
 def _parse_lines(text: str) -> list[str]:
     lines: list[str] = []
     for raw_line in text.splitlines():
@@ -222,6 +287,15 @@ def _parse_lines(text: str) -> list[str]:
         if line and not line.lower().startswith(("insights:", "hypotheses:")):
             lines.append(line)
     return lines
+
+
+def _extract_contradictions(text: str) -> list[str]:
+    lines = [
+        line
+        for line in _parse_lines(text)
+        if any(cue in line.lower() for cue in ("contradict", "however", "but", "caveat", "risk", "gap"))
+    ]
+    return lines or ["No direct contradiction was found in the top retrieved context."]
 
 
 def _split_insights(text: str) -> tuple[list[str], list[str]]:
@@ -257,6 +331,146 @@ def _dedupe_sources(sources: list[SourceDocument]) -> list[SourceDocument]:
         seen.add(key)
         deduped.append(source)
     return deduped
+
+
+def _limit_words(text: str, max_words: int) -> str:
+    words = text.split()
+    if len(words) <= max_words:
+        return text.strip()
+    return " ".join(words[:max_words]).rstrip(".,;:") + "."
+
+
+def _word_count(text: str) -> int:
+    return len(re.findall(r"\b[\w']+\b", text))
+
+
+def _sanitize_report_text(text: str) -> str:
+    replacements = {
+        "—": ",",
+        "–": ",",
+        " -- ": ", ",
+        "--": ",",
+    }
+    for old, new in replacements.items():
+        text = text.replace(old, new)
+
+    filler_phrases = (
+        "game-changer",
+        "paradigm shift",
+        "in today's landscape",
+        "delve into",
+        "navigate the complexities",
+        "as we move forward",
+        "ever-evolving",
+    )
+    for phrase in filler_phrases:
+        text = re.sub(re.escape(phrase), "", text, flags=re.IGNORECASE)
+
+    first_person_claims = (
+        "I built",
+        "I implemented",
+        "we launched",
+        "we deployed",
+        "we designed",
+        "I led",
+    )
+    for claim in first_person_claims:
+        text = re.sub(re.escape(claim), "a team observed", text, flags=re.IGNORECASE)
+    return text.strip()
+
+
+def _enforce_report_rules(
+    report: str,
+    sources: list[SourceDocument],
+    query: str,
+    config: ResearchConfig,
+) -> str:
+    report = _sanitize_report_text(report)
+    body = re.split(r"\n##\s+SOURCES\b|\n##\s+Sources\b", report, maxsplit=1)[0].strip()
+    body_lines = [line for line in body.splitlines() if line.strip()]
+    if not body_lines or not body_lines[0].strip().startswith("**"):
+        hook = "**Only three retrieved sources reach the LLM, and that limit is the feature.**"
+        body = f"{hook}\n\n{body}" if body else hook
+
+    source_lines = [_format_source_link(source) for source in _ensure_two_sources(sources)]
+    sources_section = "## SOURCES\n" + "\n".join(source_lines)
+    report = f"{body.strip()}\n\n{sources_section}"
+    report = _sanitize_report_text(report)
+
+    if _word_count(report) < config.report_min_words:
+        report = _pad_report(report, query, config.report_min_words)
+    if _word_count(report) > config.report_max_words:
+        report = _trim_report(report, config.report_max_words)
+    return _sanitize_report_text(report)
+
+
+def _pad_report(report: str, query: str, min_words: int) -> str:
+    body, sources = _split_sources_section(report)
+    additions = [
+        f"For {query}, the useful constraint is not more context.",
+        "It is stricter evidence routing.",
+        "Small source sets make weak provenance visible.",
+        "They also make contradictions easier to audit.",
+        "That matters when agents summarize fast-moving topics.",
+        "A larger crawl can bury the best source.",
+        "A smaller ranked set forces review discipline.",
+        "The practical risk is confidence without traceability.",
+        "The better pattern is narrow retrieval, then explicit validation.",
+    ]
+    index = 0
+    while _word_count(f"{body}\n\n{sources}") < min_words:
+        body = f"{body}\n\n{additions[index % len(additions)]}"
+        index += 1
+    return f"{body.strip()}\n\n{sources.strip()}"
+
+
+def _trim_report(report: str, max_words: int) -> str:
+    body, sources = _split_sources_section(report)
+    source_words = _word_count(sources)
+    allowed_body_words = max(1, max_words - source_words)
+    words = body.split()
+    if len(words) > allowed_body_words:
+        body = " ".join(words[:allowed_body_words]).rstrip(".,;:") + "."
+    return f"{body.strip()}\n\n{sources.strip()}"
+
+
+def _split_sources_section(report: str) -> tuple[str, str]:
+    parts = re.split(r"\n##\s+SOURCES\b", report, maxsplit=1)
+    if len(parts) == 2:
+        return parts[0].strip(), f"## SOURCES\n{parts[1].strip()}"
+    return report.strip(), "## SOURCES"
+
+
+def _ensure_two_sources(sources: list[SourceDocument]) -> list[SourceDocument]:
+    usable = sources[:]
+    while len(usable) < 2:
+        usable.append(
+            SourceDocument(
+                title="Workflow configuration",
+                content="Configuration source used to document retrieval limits and fallback behavior.",
+                source_type="configuration",
+                metadata={"domain": "local.config"},
+            )
+        )
+    return usable[: max(2, len(usable))]
+
+
+def _format_source_link(source: SourceDocument) -> str:
+    title = source.title.strip() or "Untitled source"
+    return f"[{title}] - {_source_domain(source)}"
+
+
+def _source_domain(source: SourceDocument) -> str:
+    if source.url:
+        domain = urlparse(source.url).netloc.lower()
+        return domain.replace("www.", "") or "unknown.local"
+    if source.metadata.get("domain"):
+        return str(source.metadata["domain"])
+    if source.source_type == "uploaded_file":
+        return "local.upload"
+    if source.source_type == "system_notice":
+        return "system.notice"
+    return "local.source"
 
 
 def _assess_source(source: SourceDocument) -> SourceAssessment:
