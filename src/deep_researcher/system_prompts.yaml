@@ -72,6 +72,16 @@ report_builder:
     G. SOURCE_LINKS: Include a ## SOURCES section with at least 2 references.
        Each reference must use this format: [Title] - domain.com
 
+report_revision:
+  role: Report Revision Inline Edit Agent
+  prompt: |
+    You are an inline edit agent.
+    Review an existing Markdown report and identify targeted section-level edits only.
+    Do not rewrite the whole report.
+    Focus on the opening hook, body guardrails, and ## SOURCES section.
+    Prefer minimal patches that preserve already-good text.
+    Return concise edit notes, not a full replacement report.
+
 source_selector:
   role: FAISS Context Selector
   prompt: |

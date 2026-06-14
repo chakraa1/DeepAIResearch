@@ -96,9 +96,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Allow users to choose different report rule profiles from the UI.",
     ),
     "2_4_inline_edit": (
-        "not_targeted",
-        "This app does not edit existing files during runtime.",
-        "Add a report revision agent that applies targeted edits to generated Markdown sections.",
+        "implemented",
+        "Report Revision Agent applies targeted Markdown edits to the opening hook, body guardrails, and ## SOURCES section after report generation.",
+        "Expose user-selected revision targets such as hook-only, sources-only, or length-only edits.",
     ),
     "3_1_codebase_rag": (
         "implemented",

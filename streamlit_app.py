@@ -27,6 +27,7 @@ AGENT_LABELS = {
     "insight_generation": "Insight Generation Agent",
     "reproducible_snippet": "Reproducible Snippet Agent",
     "report_builder": "Report Builder Agent",
+    "report_revision": "Report Revision Agent",
 }
 
 
@@ -182,6 +183,7 @@ def render_sidebar(config: ResearchConfig) -> None:
             5. Insight Generation Agent
             6. Reproducible Snippet Agent
             7. Report Builder Agent
+            8. Report Revision Agent
             """
         )
         st.subheader("Runtime Status")
@@ -260,6 +262,12 @@ def render_results(state: dict) -> None:
     with st.expander("Agent trace", expanded=False):
         for log in state.get("logs", []):
             st.write(log)
+
+    revision_edits = state.get("report_revision_edits", [])
+    if revision_edits:
+        with st.expander("Report inline edits", expanded=False):
+            for edit in revision_edits:
+                st.write(f"- {edit}")
 
     snippet = state.get("reproducible_snippet", "")
     if snippet:

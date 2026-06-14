@@ -34,6 +34,8 @@ research report in Streamlit.
    source counts and evidence checklist reproduction.
 7. **Report Builder Agent** compiles a 200-300 word Markdown report and enforces
    human-tone, hook, source-link, and formatting rules.
+8. **Report Revision Agent** applies targeted inline edits to Markdown sections
+   such as the hook, body guardrails, and `## SOURCES`.
 
 ## Simple flow diagram
 
@@ -60,8 +62,9 @@ flowchart TD
     K --> L[Insight Generation Agent]
     L --> M[Reproducible Snippet Agent]
     M --> N[Report Builder Agent]
-    N --> O[Rules-checked Markdown report]
-    O --> P[View or download in Streamlit]
+    N --> O[Report Revision Agent]
+    O --> P[Rules-checked Markdown report]
+    P --> Q[View or download in Streamlit]
 ```
 
 ## Tech stack
@@ -83,10 +86,10 @@ The app loads it at runtime and maps each concept to implementation evidence in
 
 Current computed concept alignment:
 
-- **Concept Score:** 7.6/10
-- **Implemented concepts:** 10/17
+- **Concept Score:** 8.2/10
+- **Implemented concepts:** 11/17
 - **Partial concepts:** 6/17
-- **Not targeted concepts:** 1/17
+- **Not targeted concepts:** 0/17
 
 Open the Streamlit sidebar section **Hackathon concept alignment** to view the
 full evidence table and next improvements for each concept.
@@ -103,7 +106,7 @@ full evidence table and next improvements for each concept.
 | 2.1 Structured Output & File Generation | Structured Output + State | High | Implemented | Pydantic models and TypedDict state define source documents, assessments, and workflow state. | Use structured LLM output for planner and source validation responses. |
 | 2.2 AI Code Review with Retry Limit | Reflection + Exception Handling | High | Partial | Report Builder applies deterministic rule enforcement after LLM generation, but there is no graph retry loop. | Add a reflection node with retry counters for report validation failures. |
 | 2.3 Dynamic Rules | Dynamic Guardrails | Medium | Implemented | Report word limits, top-k limits, provider selection, and report guardrails are config-driven and state-aware. | Allow users to choose different report rule profiles from the UI. |
-| 2.4 Inline Edit | Targeted Delta Patches | Medium | Not Targeted | This app does not edit existing files during runtime. | Add a report revision agent that applies targeted edits to generated Markdown sections. |
+| 2.4 Inline Edit | Targeted Delta Patches | Medium | Implemented | Report Revision Agent applies targeted Markdown edits to the opening hook, body guardrails, and ## SOURCES section after report generation. | Expose user-selected revision targets such as hook-only, sources-only, or length-only edits. |
 | 3.1 Codebase RAG & Semantic Code Search | Knowledge Retrieval | High | Implemented | FAISS retrieval indexes uploaded documents and Tavily results for grounded context selection. | Add optional repository/code indexing for technical research tasks. |
 | 3.2 Orchestrator State | State Orchestration | Critical | Implemented | ResearchState carries sub-questions, sources, tuned context, assessments, synthesis, insights, report, and logs across agents. | Persist state snapshots for comparison across runs. |
 | 3.3 Multi-Agent Code Generation per File | Multi-Agent | Critical | Implemented | Specialized LangGraph nodes divide scope across planning, retrieval, validation, analysis, insight generation, and reporting. | Add a dedicated contradiction matrix agent. |

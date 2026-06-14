@@ -323,6 +323,43 @@ End with a ## SOURCES section using exactly this source format:
             ],
         }
 
+    def revise_report_inline(self, state: ResearchState) -> ResearchState:
+        """Report Revision Agent: applies targeted Markdown section edits."""
+
+        logs = _with_logs(
+            state,
+            "Report Revision Agent started: applying targeted Markdown section edits.",
+        )
+        sources = state.get("retrieved_context", [])[: self.config.max_retrieval_docs]
+        revision_note = self.llm.generate(
+            get_system_prompt("report_revision"),
+            f"""Research question: {state['query']}
+
+Existing report:
+{state.get('report', '')}
+
+Available source links:
+{chr(10).join(_format_source_link(source) for source in _ensure_two_sources(sources))}
+
+Identify minimal inline edits for the opening hook, body guardrails, and ## SOURCES section.""",
+        )
+        revised_report, edits = _apply_inline_report_edits(
+            state.get("report", ""),
+            sources,
+            state["query"],
+            self.config,
+        )
+        return {
+            **state,
+            "report": revised_report,
+            "report_revision_edits": edits,
+            "logs": [
+                *logs,
+                f"Report Revision Agent completed: applied {len(edits)} targeted inline edits.",
+                f"Report Revision Agent note: {_limit_words(revision_note, 35)}",
+            ],
+        }
+
 
 def _format_sources(sources: list[SourceDocument], *, max_chars: int) -> str:
     blocks: list[str] = []
@@ -533,6 +570,59 @@ def _enforce_report_rules(
     if _word_count(report) > config.report_max_words:
         report = _trim_report(report, config.report_max_words)
     return _sanitize_report_text(report)
+
+
+def _apply_inline_report_edits(
+    report: str,
+    sources: list[SourceDocument],
+    query: str,
+    config: ResearchConfig,
+) -> tuple[str, list[str]]:
+    """Patch targeted Markdown sections without regenerating the report."""
+
+    edits: list[str] = []
+    revised = report.strip()
+
+    sanitized = _sanitize_report_text(revised)
+    if sanitized != revised:
+        revised = sanitized
+        edits.append("Body guardrails: replaced banned dash forms, filler phrases, or unhedged first-person claims.")
+
+    lines = revised.splitlines()
+    first_content_index = next((index for index, line in enumerate(lines) if line.strip()), None)
+    if first_content_index is None:
+        revised = "**Only three retrieved sources reach the LLM, and that limit is the feature.**"
+        edits.append("Opening hook: inserted a bold data-led hook.")
+    elif not lines[first_content_index].strip().startswith("**"):
+        lines[first_content_index] = f"**Only three retrieved sources reach the LLM, and that limit is the feature.**"
+        revised = "\n".join(lines)
+        edits.append("Opening hook: replaced the first line with a bold specific hook.")
+
+    source_lines = [_format_source_link(source) for source in _ensure_two_sources(sources)]
+    sources_section = "## SOURCES\n" + "\n".join(source_lines)
+    if re.search(r"\n##\s+SOURCES\b", revised):
+        before_sources = re.split(r"\n##\s+SOURCES\b", revised, maxsplit=1)[0].rstrip()
+        revised = f"{before_sources}\n\n{sources_section}"
+        edits.append("Sources section: replaced only the ## SOURCES block with current retrieved source links.")
+    else:
+        revised = f"{revised.rstrip()}\n\n{sources_section}"
+        edits.append("Sources section: appended missing ## SOURCES block.")
+
+    if _word_count(revised) < config.report_min_words:
+        revised = _pad_report(revised, query, config.report_min_words)
+        edits.append("Body length: appended concise evidence-routing sentences to meet the minimum word count.")
+    if _word_count(revised) > config.report_max_words:
+        revised = _trim_report(revised, config.report_max_words)
+        edits.append("Body length: trimmed body text while preserving the ## SOURCES section.")
+
+    final = _sanitize_report_text(revised)
+    if final != revised:
+        revised = final
+        edits.append("Final cleanup: sanitized formatting after section edits.")
+
+    if not edits:
+        edits.append("No inline edits required after validation.")
+    return revised.strip(), edits
 
 
 def _pad_report(report: str, query: str, min_words: int) -> str:

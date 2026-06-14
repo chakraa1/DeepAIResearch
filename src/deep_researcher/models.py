@@ -50,5 +50,6 @@ class ResearchState(TypedDict, total=False):
     hypotheses: list[str]
     reproducible_snippet: str
     report: str
+    report_revision_edits: list[str]
     logs: list[str]
     errors: list[str]

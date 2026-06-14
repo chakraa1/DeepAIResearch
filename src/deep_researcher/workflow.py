@@ -29,6 +29,7 @@ class DeepResearchWorkflow:
         graph.add_node("insight_generation", self.agents.generate_insights)
         graph.add_node("reproducible_snippet", self.agents.generate_reproducible_snippet)
         graph.add_node("report_builder", self.agents.build_report)
+        graph.add_node("report_revision", self.agents.revise_report_inline)
 
         graph.set_entry_point("query_planner")
         graph.add_edge("query_planner", "contextual_retriever")
@@ -37,7 +38,8 @@ class DeepResearchWorkflow:
         graph.add_edge("critical_analysis", "insight_generation")
         graph.add_edge("insight_generation", "reproducible_snippet")
         graph.add_edge("reproducible_snippet", "report_builder")
-        graph.add_edge("report_builder", END)
+        graph.add_edge("report_builder", "report_revision")
+        graph.add_edge("report_revision", END)
         return graph.compile()
 
     def run(
