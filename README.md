@@ -21,8 +21,8 @@ research report in Streamlit.
 1. **Query Planning Agent** decomposes the topic into multi-hop sub-questions.
 2. **Contextual Retriever Agent** runs Tavily searches in parallel across
    research papers, news articles, reports, and APIs. It adds uploaded files,
-   then passes the configurable FAISS top-k results to LLM agents. The default
-   top-k is 3.
+   runs configurable FAISS top-k retrieval, then tunes all source signals into
+   relevant context for LLM agents. The default top-k is 3.
 3. **Source Validator Agent** validates the top retrieved results with the LLM
    and heuristic provenance checks. The default validator top-k is 3.
 4. **Critical Analysis Agent** summarizes findings, contradictions, and source
@@ -44,18 +44,20 @@ flowchart TD
     D --> E3[Reports search]
     D --> E4[APIs and datasets search]
     D --> F[Uploaded documents]
-    E1 --> G[FAISS top-k retrieval]
-    E2 --> G
-    E3 --> G
-    E4 --> G
-    F --> G
-    G --> H[Top 3 context to LLM agents]
-    H --> I[Source Validator Agent]
-    I --> J[Critical Analysis Agent]
-    J --> K[Insight Generation Agent]
-    K --> L[Report Builder Agent]
-    L --> M[Rules-checked Markdown report]
-    M --> N[View or download in Streamlit]
+    D --> G[FAISS top-k retrieval]
+    E1 --> H[Tuning to Relevant Context]
+    E2 --> H
+    E3 --> H
+    E4 --> H
+    F --> H
+    G --> H
+    H --> I[Top 3 context to LLM agents]
+    I --> J[Source Validator Agent]
+    J --> K[Critical Analysis Agent]
+    K --> L[Insight Generation Agent]
+    L --> M[Report Builder Agent]
+    M --> N[Rules-checked Markdown report]
+    N --> O[View or download in Streamlit]
 ```
 
 ## Tech stack

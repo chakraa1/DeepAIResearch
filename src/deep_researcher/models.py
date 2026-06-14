@@ -41,6 +41,7 @@ class ResearchState(TypedDict, total=False):
     sub_questions: list[str]
     tavily_sources: list[SourceDocument]
     retrieved_context: list[SourceDocument]
+    relevant_context_summary: str
     source_assessments: list[SourceAssessment]
     source_validation_summary: str
     synthesis: str

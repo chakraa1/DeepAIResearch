@@ -73,17 +73,37 @@ Content: Evaluation quality is a recurring adoption bottleneck.
         "source_selector",
         query="enterprise AI agent adoption",
         top_k=3,
+        relevant_context_summary="Reports and uploaded files agree that evaluation quality is the key bottleneck.",
         retrieved_context=retrieved_context,
     )
 
     assert "Role: FAISS Context Selector" in prompt
     assert "Research question: enterprise AI agent adoption" in prompt
     assert "FAISS top-k limit: 3" in prompt
+    assert "Summarised relevant context from all sources:" in prompt
+    assert "evaluation quality is the key bottleneck" in prompt
     assert "Retrieved context with sources:" in prompt
     assert "Agent Adoption Report" in prompt
     assert "https://example.com/report" in prompt
     assert "Evaluation quality is a recurring adoption bottleneck." in prompt
     assert "{retrieved_context}" not in prompt
+    assert "{relevant_context_summary}" not in prompt
+
+
+def test_relevant_context_tuner_prompt_combines_all_sources_and_faiss_top_k() -> None:
+    prompt = render_system_prompt(
+        "relevant_context_tuner",
+        query="enterprise AI agent adoption",
+        source_inventory="Source counts: reports: 1, uploaded_file: 1",
+        faiss_top_context="[1] Agent Adoption Report\nContent: Oversight is required.",
+    )
+
+    assert "Role: Tuning to Relevant Context Agent" in prompt
+    assert "Research question: enterprise AI agent adoption" in prompt
+    assert "Source counts: reports: 1, uploaded_file: 1" in prompt
+    assert "Agent Adoption Report" in prompt
+    assert "Oversight is required." in prompt
+    assert "{source_inventory}" not in prompt
 
 
 def test_offline_workflow_generates_report_from_local_sources() -> None:
@@ -120,5 +140,7 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     assert "## SOURCES" in result["report"]
     assert len(result["retrieved_context"]) <= 3
     assert result["retrieved_context"]
+    assert result["relevant_context_summary"]
     assert any("Contextual Retriever prompt plan:" in log for log in result["logs"])
+    assert any("Tuning to Relevant Context completed:" in log for log in result["logs"])
     assert result["logs"][-1] == "Report Builder Agent completed: compiled the final rules-checked report."

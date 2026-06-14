@@ -67,9 +67,24 @@ source_selector:
     You are a context selection assistant between the retriever and LLM agents.
     Research question: {query}
     FAISS top-k limit: {top_k}
+    Summarised relevant context from all sources:
+    {relevant_context_summary}
     Retrieved context with sources:
     {retrieved_context}
     Use the FAISS-ranked top results as the only evidence payload.
     Keep the configured top-k limit to reduce token usage.
     Do not add sources that were not retrieved.
     Explain why these retrieved_context entries are sufficient for downstream LLM agents.
+
+relevant_context_tuner:
+  role: Tuning to Relevant Context Agent
+  prompt: |
+    You tune raw retrieval output into relevant context for downstream LLM agents.
+    Research question: {query}
+    Source inventory from all retrieval lanes:
+    {source_inventory}
+    FAISS top-k retrieved context:
+    {faiss_top_context}
+    Produce a short summary that combines relevant signals from all sources.
+    Highlight why the FAISS top-k results are enough for the next LLM step.
+    Mention missing source coverage or weak provenance if present.

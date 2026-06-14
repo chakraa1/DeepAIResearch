@@ -79,10 +79,26 @@ Return one sub-question per line."""
             retrieved_context = all_sources[: self.config.max_retrieval_docs]
         retrieved_context = retrieved_context[: self.config.max_retrieval_docs]
 
+        source_inventory = _format_source_inventory(all_sources)
+        tuner_prompt = render_system_prompt(
+            "relevant_context_tuner",
+            query=query,
+            source_inventory=source_inventory,
+            faiss_top_context=_format_sources(retrieved_context, max_chars=3_000),
+        )
+        relevant_context_summary = _limit_words(
+            self.llm.generate(
+                tuner_prompt,
+                "Tune the combined sources into concise relevant context for the Top 3 LLM handoff.",
+            ),
+            140,
+        )
+
         selector_prompt = render_system_prompt(
             "source_selector",
             query=query,
             top_k=self.config.max_retrieval_docs,
+            relevant_context_summary=relevant_context_summary,
             retrieved_context=_format_sources(retrieved_context, max_chars=3_000),
         )
         selector_note = self.llm.generate(
@@ -94,6 +110,7 @@ Return one sub-question per line."""
             **state,
             "tavily_sources": web_sources,
             "retrieved_context": retrieved_context,
+            "relevant_context_summary": relevant_context_summary,
             "logs": [
                 *logs,
                 (
@@ -103,6 +120,7 @@ Return one sub-question per line."""
                     f"{len(retrieved_context)} FAISS chunks."
                 ),
                 f"Contextual Retriever prompt plan: {_limit_words(retrieval_plan, 40)}",
+                f"Tuning to Relevant Context completed: {_limit_words(relevant_context_summary, 45)}",
                 f"FAISS Context Selector note: {_limit_words(selector_note, 40)}",
             ],
         }
@@ -282,6 +300,23 @@ def _format_sources(sources: list[SourceDocument], *, max_chars: int) -> str:
         blocks.append(block)
         used += len(block)
     return "\n---\n".join(blocks) if blocks else "No source context available."
+
+
+def _format_source_inventory(sources: list[SourceDocument], *, max_items: int = 10) -> str:
+    if not sources:
+        return "No sources collected."
+
+    counts: dict[str, int] = {}
+    for source in sources:
+        counts[source.source_type] = counts.get(source.source_type, 0) + 1
+
+    count_lines = ", ".join(f"{source_type}: {count}" for source_type, count in sorted(counts.items()))
+    source_lines = []
+    for index, source in enumerate(sources[:max_items], start=1):
+        source_lines.append(
+            f"[{index}] {source.title} | type={source.source_type} | url={source.url or 'local/uploaded'}"
+        )
+    return f"Source counts: {count_lines}\n" + "\n".join(source_lines)
 
 
 def _with_logs(state: ResearchState, message: str) -> list[str]:
