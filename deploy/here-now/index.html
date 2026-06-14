@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Multi-Agent AI Deep Researcher</title>
+    <meta
+      name="description"
+      content="A LangGraph, FAISS, Tavily, Streamlit multi-agent research assistant."
+    />
+    <link rel="stylesheet" href="assets/styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <p class="eyebrow">LangGraph + FAISS + Tavily + Streamlit</p>
+        <h1>Multi-Agent AI Deep Researcher</h1>
+        <p class="lede">
+          A research assistant for multi-hop, multi-source investigations. It
+          coordinates retrieval, validation, analysis, insight generation, and
+          report building through specialized agents.
+        </p>
+        <div class="cta-row">
+          <a class="button" href="#run">Run locally</a>
+          <a class="button secondary" href="#workflow">View workflow</a>
+        </div>
+        <p class="note">
+          here.now hosts this static project page. The full Python Streamlit app
+          runs on your machine or another compute host.
+        </p>
+      </section>
+
+      <section class="grid" aria-label="Agent team">
+        <article>
+          <h2>Contextual Retriever</h2>
+          <p>
+            Runs parallel Tavily searches across papers, news, reports, APIs,
+            uploaded files, and FAISS top-k retrieval.
+          </p>
+        </article>
+        <article>
+          <h2>Tuning to Relevant Context</h2>
+          <p>
+            Summarizes all source signals and the top FAISS chunks before the
+            Top 3 context is handed to downstream LLM agents.
+          </p>
+        </article>
+        <article>
+          <h2>Critical Analysis</h2>
+          <p>
+            Produces concise evidence-backed synthesis, contradictions, and
+            source validation with configurable word limits.
+          </p>
+        </article>
+        <article>
+          <h2>Report Builder</h2>
+          <p>
+            Builds a 200-300 word rules-checked report with source links and a
+            human senior-engineer tone.
+          </p>
+        </article>
+      </section>
+
+      <section id="workflow" class="panel">
+        <h2>Simple workflow</h2>
+        <ol class="workflow">
+          <li>User research question enters the Streamlit UI.</li>
+          <li>Query Planning Agent creates focused sub-questions.</li>
+          <li>
+            Contextual Retriever Agent starts parallel source lanes: research
+            papers, news, reports, APIs, uploaded documents, and FAISS top-k.
+          </li>
+          <li>Tuning to Relevant Context combines all signals.</li>
+          <li>Top 3 context is sent to Source Validator and LLM agents.</li>
+          <li>Critical Analysis and Insight Generation produce concise findings.</li>
+          <li>Report Builder compiles the final structured report.</li>
+        </ol>
+      </section>
+
+      <section id="run" class="panel">
+        <h2>Run the full app</h2>
+        <pre><code>python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env
+streamlit run streamlit_app.py</code></pre>
+        <p>
+          OpenRouter is supported through the API provider dropdown, or with:
+        </p>
+        <pre><code>LLM_PROVIDER=openrouter
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openai/gpt-4o-mini</code></pre>
+      </section>
+    </main>
+  </body>
+</html>
