@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import fields, is_dataclass
 import os
 import sys
 from pathlib import Path
@@ -45,7 +46,11 @@ def main() -> None:
         "LangGraph-orchestrated agents for multi-hop, multi-source investigations with Tavily search and FAISS retrieval."
     )
 
-    config = load_config_from_ui()
+    try:
+        config = load_config_from_ui()
+    except Exception:
+        render_settings_error()
+        return
     render_sidebar(config)
 
     query = st.text_area(
@@ -85,11 +90,11 @@ def load_config_from_ui() -> ResearchConfig:
     config = ResearchConfig.from_env()
     secrets = _streamlit_secrets()
 
-    openai_key = secrets.get("OPENAI_API_KEY") or config.openai_api_key
-    tavily_key = secrets.get("TAVILY_API_KEY") or config.tavily_api_key
-    provider = secrets.get("LLM_PROVIDER") or config.llm_provider
-    base_url = secrets.get("OPENAI_BASE_URL") or config.openai_base_url or ""
-    model = secrets.get("OPENAI_MODEL") or config.openai_model
+    openai_key = secrets.get("OPENAI_API_KEY") or _config_value(config, "openai_api_key", None)
+    tavily_key = secrets.get("TAVILY_API_KEY") or _config_value(config, "tavily_api_key", None)
+    provider = secrets.get("LLM_PROVIDER") or _config_value(config, "llm_provider", "openai")
+    base_url = secrets.get("OPENAI_BASE_URL") or _config_value(config, "openai_base_url", "") or ""
+    model = secrets.get("OPENAI_MODEL") or _config_value(config, "openai_model", "gpt-4o-mini")
 
     with st.sidebar:
         st.header("Configuration")
@@ -125,39 +130,39 @@ def load_config_from_ui() -> ResearchConfig:
             help="Optional. Used by the Contextual Retriever Agent for web search.",
         )
         model = st.text_input("LLM model", value=model)
-        max_web_results = st.slider("Max web results per investigation", 4, 16, _clamp(config.max_web_results, 4, 16))
+        max_web_results = st.slider("Max web results per investigation", 4, 16, _clamp(_config_value(config, "max_web_results", 8), 4, 16))
         max_retrieval_docs = st.slider(
             "FAISS top-k chunks sent to LLM agents",
             1,
             10,
-            _clamp(config.max_retrieval_docs, 1, 10),
+            _clamp(_config_value(config, "max_retrieval_docs", 3), 1, 10),
             help="Defaults to 3 to control token usage between retrieval and LLM agents.",
         )
-        validator_top_k = st.slider("Source validator top-k", 1, 10, _clamp(config.validator_top_k, 1, 10))
-        critical_limit = st.slider("Critical analysis word limit", 80, 300, _clamp(config.critical_analysis_word_limit, 80, 300))
-        insight_limit = st.slider("Insight generation word limit", 80, 300, _clamp(config.insight_word_limit, 80, 300))
-        report_min_words = st.slider("Report minimum words", 100, 300, _clamp(config.report_min_words, 100, 300))
-        report_max_words = st.slider("Report maximum words", 200, 400, _clamp(config.report_max_words, 200, 400))
+        validator_top_k = st.slider("Source validator top-k", 1, 10, _clamp(_config_value(config, "validator_top_k", 3), 1, 10))
+        critical_limit = st.slider("Critical analysis word limit", 80, 300, _clamp(_config_value(config, "critical_analysis_word_limit", 200), 80, 300))
+        insight_limit = st.slider("Insight generation word limit", 80, 300, _clamp(_config_value(config, "insight_word_limit", 200), 80, 300))
+        report_min_words = st.slider("Report minimum words", 100, 300, _clamp(_config_value(config, "report_min_words", 200), 100, 300))
+        report_max_words = st.slider("Report maximum words", 200, 400, _clamp(_config_value(config, "report_max_words", 300), 200, 400))
         report_max_words = max(report_max_words, report_min_words)
         reflection_retry_limit = st.slider(
             "Report reflection retry limit",
             0,
             5,
-            _clamp(config.report_reflection_retry_limit, 0, 5),
+            _clamp(_config_value(config, "report_reflection_retry_limit", 2), 0, 5),
         )
         generate_code_snippet = st.checkbox(
             "Generate reproducible Python snippet",
-            value=config.generate_code_snippet,
+            value=_config_value(config, "generate_code_snippet", True),
             help="Adds a notebook-ready snippet that reproduces source counts and evidence checklist.",
         )
         require_human_review = st.checkbox(
             "Require human review gate",
-            value=config.require_human_review,
+            value=_config_value(config, "require_human_review", False),
             help="Advanced: uses LangGraph interrupt before Report Builder. Leave off for unattended runs.",
         )
         checkpoint_thread_id = st.text_input(
             "Checkpoint thread ID",
-            value=config.checkpoint_thread_id,
+            value=_config_value(config, "checkpoint_thread_id", "deep-research-default"),
             help="MemorySaver thread ID for replayable workflow checkpoints.",
         )
 
@@ -171,23 +176,25 @@ def load_config_from_ui() -> ResearchConfig:
     else:
         os.environ.pop("OPENAI_BASE_URL", None)
 
-    return ResearchConfig(
-        openai_api_key=openai_key or None,
-        tavily_api_key=tavily_key or None,
-        llm_provider=provider,
-        openai_base_url=base_url or None,
-        openai_model=model,
-        max_web_results=max_web_results,
-        max_retrieval_docs=max_retrieval_docs,
-        validator_top_k=validator_top_k,
-        critical_analysis_word_limit=critical_limit,
-        insight_word_limit=insight_limit,
-        report_min_words=report_min_words,
-        report_max_words=report_max_words,
-        generate_code_snippet=generate_code_snippet,
-        report_reflection_retry_limit=reflection_retry_limit,
-        require_human_review=require_human_review,
-        checkpoint_thread_id=checkpoint_thread_id or "deep-research-default",
+    return _make_research_config(
+        {
+            "openai_api_key": openai_key or None,
+            "tavily_api_key": tavily_key or None,
+            "llm_provider": provider,
+            "openai_base_url": base_url or None,
+            "openai_model": model,
+            "max_web_results": max_web_results,
+            "max_retrieval_docs": max_retrieval_docs,
+            "validator_top_k": validator_top_k,
+            "critical_analysis_word_limit": critical_limit,
+            "insight_word_limit": insight_limit,
+            "report_min_words": report_min_words,
+            "report_max_words": report_max_words,
+            "generate_code_snippet": generate_code_snippet,
+            "report_reflection_retry_limit": reflection_retry_limit,
+            "require_human_review": require_human_review,
+            "checkpoint_thread_id": checkpoint_thread_id or "deep-research-default",
+        }
     )
 
 
@@ -210,15 +217,15 @@ def render_sidebar(config: ResearchConfig) -> None:
             """
         )
         st.subheader("Runtime Status")
-        st.write("LLM:", "enabled" if config.llm_enabled else "local fallback")
-        st.write("Provider:", _provider_label(config.llm_provider))
-        st.write("Base URL:", config.llm_base_url or "OpenAI default")
-        st.write("Web search:", "enabled" if config.web_search_enabled else "local/upload-only")
-        st.write("FAISS top-k:", config.max_retrieval_docs)
-        st.write("Validator top-k:", config.validator_top_k)
-        st.write("Report words:", f"{config.report_min_words}-{config.report_max_words}")
-        st.write("Reflection retries:", config.report_reflection_retry_limit)
-        st.write("Checkpoint thread:", config.checkpoint_thread_id)
+        st.write("LLM:", "enabled" if _config_value(config, "llm_enabled", False) else "local fallback")
+        st.write("Provider:", _provider_label(_config_value(config, "llm_provider", "openai")))
+        st.write("Base URL:", _config_value(config, "llm_base_url", None) or "OpenAI default")
+        st.write("Web search:", "enabled" if _config_value(config, "web_search_enabled", False) else "local/upload-only")
+        st.write("FAISS top-k:", _config_value(config, "max_retrieval_docs", 3))
+        st.write("Validator top-k:", _config_value(config, "validator_top_k", 3))
+        st.write("Report words:", f"{_config_value(config, 'report_min_words', 200)}-{_config_value(config, 'report_max_words', 300)}")
+        st.write("Reflection retries:", _config_value(config, "report_reflection_retry_limit", 2))
+        st.write("Checkpoint thread:", _config_value(config, "checkpoint_thread_id", "deep-research-default"))
         render_concept_alignment()
 
 
@@ -239,7 +246,11 @@ def render_concept_alignment() -> None:
 
 def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
     local_documents = load_uploaded_documents(uploaded_files or [])
-    workflow = DeepResearchWorkflow(config)
+    try:
+        workflow = DeepResearchWorkflow(config)
+    except Exception:
+        render_settings_error()
+        return
 
     progress = st.progress(0)
     status = st.empty()
@@ -248,21 +259,30 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
     node_count = len(AGENT_LABELS)
     shown_logs = 0
 
-    with st.spinner("Agents are collaborating on the investigation..."):
-        for index, (node_name, state) in enumerate(
-            workflow.stream(query, local_documents=local_documents),
-            start=1,
-        ):
-            final_state = state
-            label = AGENT_LABELS.get(node_name, node_name)
-            progress.progress(min(index / node_count, 1.0))
-            status.success(f"{label} completed")
-            with log_container:
-                st.markdown(f"**{label}**")
-                logs = state.get("logs", [])
-                for log in logs[shown_logs:]:
-                    st.write(log)
-                shown_logs = len(logs)
+    try:
+        with st.spinner("Agents are collaborating on the investigation..."):
+            for index, (node_name, state) in enumerate(
+                workflow.stream(query, local_documents=local_documents),
+                start=1,
+            ):
+                final_state = state
+                label = AGENT_LABELS.get(node_name, node_name)
+                progress.progress(min(index / node_count, 1.0))
+                status.success(f"{label} completed")
+                with log_container:
+                    st.markdown(f"**{label}**")
+                    logs = state.get("logs", [])
+                    for log in logs[shown_logs:]:
+                        st.write(log)
+                    shown_logs = len(logs)
+    except AttributeError:
+        render_settings_error()
+        return
+    except Exception:
+        st.error(
+            "The research run could not finish. Please check your API keys, refresh the app, and try again."
+        )
+        return
 
     if final_state is None:
         st.error("The workflow did not produce a result.")
@@ -357,6 +377,38 @@ def _streamlit_secrets() -> dict[str, str]:
         return dict(st.secrets)
     except Exception:
         return {}
+
+
+def render_settings_error() -> None:
+    st.error(
+        "The app settings could not be loaded. Please refresh the page, then try again."
+    )
+    with st.expander("What can I try?"):
+        st.write(
+            "- Restart Streamlit so it picks up the latest project files.\n"
+            "- If you recently pulled changes, reinstall dependencies with `pip install -r requirements.txt`.\n"
+            "- Check that your `.env` file does not contain old or misspelled setting names."
+        )
+
+
+def _config_value(config: object, name: str, default):
+    try:
+        return getattr(config, name)
+    except AttributeError:
+        return default
+
+
+def _make_research_config(values: dict) -> ResearchConfig:
+    """Build config while tolerating older ResearchConfig shapes."""
+
+    try:
+        return ResearchConfig(**values)
+    except TypeError:
+        if is_dataclass(ResearchConfig):
+            allowed = {field.name for field in fields(ResearchConfig)}
+            filtered = {key: value for key, value in values.items() if key in allowed}
+            return ResearchConfig(**filtered)
+        raise
 
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
