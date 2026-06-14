@@ -71,6 +71,22 @@ flowchart TD
 - OpenAI chat and embedding models when configured
 - YAML system prompts loaded with process-level caching
 
+## Hackathon concept alignment
+
+The accelerator concept list is stored in `src/deep_researcher/concepts.json`.
+The app loads it at runtime and maps each concept to implementation evidence in
+`src/deep_researcher/concepts.py`.
+
+Current computed concept alignment:
+
+- **Concept Score:** 7.2/10
+- **Implemented concepts:** 10/18
+- **Partial concepts:** 6/18
+- **Not targeted concepts:** 2/18
+
+Open the Streamlit sidebar section **Hackathon concept alignment** to view the
+full evidence table and next improvements for each concept.
+
 ## Quick start
 
 ```bash
@@ -173,6 +189,8 @@ pytest
 │   └── install_windows.ps1
 ├── src/deep_researcher/
 │   ├── agents.py
+│   ├── concepts.json
+│   ├── concepts.py
 │   ├── config.py
 │   ├── embeddings.py
 │   ├── llm.py

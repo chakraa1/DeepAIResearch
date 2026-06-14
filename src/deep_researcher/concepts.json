@@ -1,0 +1,131 @@
+{
+  "chapter": "Orion Tutorial - Consolidated Agent Curriculum and Design Patterns",
+  "concepts": [
+    {
+      "id": "1_1_llm_setup",
+      "title": "1.1 LLM Setup",
+      "design_pattern": "Model Initialization",
+      "description": "Configuring the core language model client, establishing provider environments, and adjusting structural hyperparameters like temperature.",
+      "importance": "Critical"
+    },
+    {
+      "id": "1_2_tools",
+      "title": "1.2 Tools & Shell Command Execution",
+      "design_pattern": "Tool Use",
+      "description": "Defining executable capabilities (file operations, shell subprocesses) using tools like `@tool + subprocess` that the model can call to interact with external environments.",
+      "importance": "High"
+    },
+    {
+      "id": "1_3_agent_graph",
+      "title": "1.3 Agent Graph & Smart Routing",
+      "design_pattern": "Routing",
+      "description": "Constructing the stateful runtime network mapping out nodes, control flows, and conditional execution paths using `add_conditional_edges`.",
+      "importance": "Critical"
+    },
+    {
+      "id": "1_4_structured_planning",
+      "title": "1.4 Structured Planning",
+      "design_pattern": "Planning",
+      "description": "Leveraging structural orchestration (such as Agent Mode's planning steps via `with_structured_output`) to construct sequential execution strategies before generation.",
+      "importance": "High"
+    },
+    {
+      "id": "1_5_code_generation",
+      "title": "1.5 Code Generation",
+      "design_pattern": "Code Generation",
+      "description": "Instructing the agent to output syntactically valid code blocks tailored to a specified execution runtime.",
+      "importance": "High"
+    },
+    {
+      "id": "1_6_system_prompt",
+      "title": "1.6 System Prompt",
+      "design_pattern": "Persona & Constraint Management",
+      "description": "Structuring high-priority system prompt constraints to control agent persona, logic safety, and output strictness.",
+      "importance": "High"
+    },
+    {
+      "id": "1_7_streaming",
+      "title": "1.7 Streaming",
+      "design_pattern": "UX Event Streaming",
+      "description": "Handling real-time token delivery streaming loops from the graph execution layer directly to user interfaces.",
+      "importance": "Medium"
+    },
+    {
+      "id": "1_8_multi_turn",
+      "title": "1.8 Multi Turn Conversation",
+      "design_pattern": "Session Memory",
+      "description": "Maintaining stateful memory layers and conversational context buffers across sequential user interactions.",
+      "importance": "Medium"
+    },
+    {
+      "id": "2_1_structured_output",
+      "title": "2.1 Structured Output & File Generation",
+      "design_pattern": "Structured Output + State",
+      "description": "Enforcing deterministic model formatting targets such as JSON schemas, Pydantic objects, or typed system responses.",
+      "importance": "High"
+    },
+    {
+      "id": "2_2_self_correction_reflection",
+      "title": "2.2 AI Code Review with Retry Limit",
+      "design_pattern": "Reflection + Exception Handling",
+      "description": "Implementing inner-loop parsing catch blocks, code review suggestions, and conditional edges + counters to capture errors and route them back for self-correction.",
+      "importance": "High"
+    },
+    {
+      "id": "2_3_dynamic_rules",
+      "title": "2.3 Dynamic Rules",
+      "design_pattern": "Dynamic Guardrails",
+      "description": "Injecting shifting validation profiles or guardrails based on state changes or specific file paths discovered at runtime.",
+      "importance": "Medium"
+    },
+    {
+      "id": "2_4_inline_edit",
+      "title": "2.4 Inline Edit",
+      "design_pattern": "Targeted Delta Patches",
+      "description": "Targeting discrete blocks within pre-existing structures to execute precise diff patches without full rewrites.",
+      "importance": "Medium"
+    },
+    {
+      "id": "3_1_codebase_rag",
+      "title": "3.1 Codebase RAG & Semantic Code Search",
+      "design_pattern": "Knowledge Retrieval",
+      "description": "Indexing system codebases using abstractions like FAISS + retriever tools (`@codebase`, `@file`) to provide accurate contextual grounding.",
+      "importance": "High"
+    },
+    {
+      "id": "3_2_orchestrator_state",
+      "title": "3.2 Orchestrator State",
+      "design_pattern": "State Orchestration",
+      "description": "Managing complex global state contexts to control cross-boundary scopes within hierarchical multi-agent tasks.",
+      "importance": "Critical"
+    },
+    {
+      "id": "3_3_multi_agent",
+      "title": "3.3 Multi-Agent Code Generation per File",
+      "design_pattern": "Multi-Agent",
+      "description": "Dividing operational scope among specialized actor nodes with distinct capabilities, multi-file edits, and state transitions.",
+      "importance": "Critical"
+    },
+    {
+      "id": "3_4_human_in_the_loop",
+      "title": "3.4 Human Approval Gate",
+      "design_pattern": "Human-in-the-Loop",
+      "description": "Setting explicit graph breakpoints using `interrupt + Command` to pause execution for a 'Review before applying' validation gate.",
+      "importance": "High"
+    },
+    {
+      "id": "3_5_parallel_generation",
+      "title": "3.5 Parallel File Generation",
+      "design_pattern": "Parallelization",
+      "description": "Branching execution paths using the `Send` API + reducers to process parallel agents or worktrees concurrently before merging state.",
+      "importance": "Medium"
+    },
+    {
+      "id": "3_6_time_travel",
+      "title": "3.6 State Checkpointing & Time Travel",
+      "design_pattern": "Memory Management",
+      "description": "Leveraging `MemorySaver` and thread configurations for session persistence, allowing users to look back into history or re-route alternate path executions.",
+      "importance": "Medium"
+    }
+  ]
+}

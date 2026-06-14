@@ -14,6 +14,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from deep_researcher import DeepResearchWorkflow, ResearchConfig
+from deep_researcher.concepts import coverage_table_rows, score_concept_coverage
 from deep_researcher.config import OPENROUTER_BASE_URL
 from deep_researcher.models import SourceDocument
 
@@ -183,6 +184,22 @@ def render_sidebar(config: ResearchConfig) -> None:
         st.write("FAISS top-k:", config.max_retrieval_docs)
         st.write("Validator top-k:", config.validator_top_k)
         st.write("Report words:", f"{config.report_min_words}-{config.report_max_words}")
+        render_concept_alignment()
+
+
+def render_concept_alignment() -> None:
+    score = score_concept_coverage()
+    with st.expander("Hackathon concept alignment", expanded=False):
+        st.metric("Concept Score", f"{score.score}/{score.max_score}")
+        st.caption(
+            f"{score.implemented_count} implemented, {score.partial_count} partial, "
+            f"{score.total_count} total concepts."
+        )
+        st.dataframe(
+            coverage_table_rows(),
+            hide_index=True,
+            use_container_width=True,
+        )
 
 
 def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:

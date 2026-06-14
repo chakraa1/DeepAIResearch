@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from deep_researcher.config import OPENROUTER_BASE_URL, ResearchConfig
+from deep_researcher.concepts import coverage_table_rows, load_concepts, score_concept_coverage
 from deep_researcher.embeddings import HashEmbeddings, build_embeddings
 from deep_researcher.models import SourceDocument
 from deep_researcher.prompts import get_system_prompt, render_system_prompt
@@ -18,6 +19,21 @@ def test_hash_embeddings_are_deterministic() -> None:
 
     assert first == second
     assert len(first) == 32
+
+
+def test_concepts_json_loads_and_scores_alignment() -> None:
+    concepts = load_concepts()
+    score = score_concept_coverage()
+    rows = coverage_table_rows()
+
+    assert len(concepts) == 18
+    assert score.chapter == "Orion Tutorial - Consolidated Agent Curriculum and Design Patterns"
+    assert score.max_score == 10
+    assert 0 < score.score <= 10
+    assert score.implemented_count >= 10
+    assert score.partial_count >= 5
+    assert len(rows) == 18
+    assert any(row["Concept"] == "1.3 Agent Graph & Smart Routing" for row in rows)
 
 
 def test_openrouter_env_sets_base_url_and_model(monkeypatch: pytest.MonkeyPatch) -> None:
