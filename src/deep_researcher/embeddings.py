@@ -51,7 +51,7 @@ class HashEmbeddings(Embeddings):
 def build_embeddings(config: ResearchConfig) -> Embeddings:
     """Create the best available embedding implementation."""
 
-    if config.openai_api_key:
+    if config.openai_api_key and config.uses_direct_openai_api:
         from langchain_openai import OpenAIEmbeddings
 
         return OpenAIEmbeddings(api_key=config.openai_api_key)

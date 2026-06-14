@@ -85,6 +85,8 @@ Edit `.env` and add keys if available:
 ```bash
 OPENAI_API_KEY=your_openai_key
 TAVILY_API_KEY=your_tavily_key
+LLM_PROVIDER=openai
+OPENAI_BASE_URL=
 OPENAI_MODEL=gpt-4o-mini
 MAX_WEB_RESULTS=8
 MAX_RETRIEVAL_DOCS=3
@@ -95,13 +97,23 @@ REPORT_MIN_WORDS=200
 REPORT_MAX_WORDS=300
 ```
 
+For OpenRouter, use an OpenRouter key and these settings:
+
+```bash
+OPENAI_API_KEY=your_openrouter_key
+LLM_PROVIDER=openrouter
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openai/gpt-4o-mini
+```
+
 Run the app:
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-The UI also lets you paste API keys into the sidebar for a one-off session.
+The UI also lets you select the API provider, switch base URLs, choose the
+model, and paste keys into the sidebar for a one-off session.
 
 ## Windows install at `G:\Outskill\Hackathon\DeepAIResearch`
 

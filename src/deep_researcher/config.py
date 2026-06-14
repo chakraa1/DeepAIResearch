@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 from dotenv import load_dotenv
 
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
 
 @dataclass(slots=True)
 class ResearchConfig:
@@ -14,6 +16,8 @@ class ResearchConfig:
 
     openai_api_key: str | None = None
     tavily_api_key: str | None = None
+    llm_provider: str = "openai"
+    openai_base_url: str | None = None
     openai_model: str = "gpt-4o-mini"
     max_web_results: int = 8
     max_retrieval_docs: int = 3
@@ -30,10 +34,14 @@ class ResearchConfig:
         """Load settings from environment variables and a local .env file."""
 
         load_dotenv()
+        provider = _normalize_provider(os.getenv("LLM_PROVIDER", "openai"))
+        base_url = _resolve_base_url(provider, os.getenv("OPENAI_BASE_URL") or None)
         return cls(
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
             tavily_api_key=os.getenv("TAVILY_API_KEY") or None,
-            openai_model=os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            llm_provider=provider,
+            openai_base_url=base_url,
+            openai_model=os.getenv("OPENAI_MODEL") or _default_model(provider),
             max_web_results=_read_int("MAX_WEB_RESULTS", 8),
             max_retrieval_docs=_read_int("MAX_RETRIEVAL_DOCS", 3),
             validator_top_k=_read_int("VALIDATOR_TOP_K", 3),
@@ -51,6 +59,17 @@ class ResearchConfig:
     def web_search_enabled(self) -> bool:
         return bool(self.tavily_api_key)
 
+    @property
+    def llm_base_url(self) -> str | None:
+        return _resolve_base_url(self.llm_provider, self.openai_base_url)
+
+    @property
+    def uses_direct_openai_api(self) -> bool:
+        base_url = self.llm_base_url
+        return self.llm_provider == "openai" and (
+            not base_url or "api.openai.com" in base_url
+        )
+
 
 def _read_int(name: str, default: int) -> int:
     value = os.getenv(name)
@@ -60,3 +79,27 @@ def _read_int(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _normalize_provider(provider: str | None) -> str:
+    normalized = (provider or "openai").strip().lower()
+    if normalized in {"openrouter", "open-router"}:
+        return "openrouter"
+    if normalized in {"custom", "custom_openai", "custom-openai"}:
+        return "custom"
+    return "openai"
+
+
+def _resolve_base_url(provider: str, base_url: str | None) -> str | None:
+    provider = _normalize_provider(provider)
+    if provider == "openrouter":
+        return base_url or OPENROUTER_BASE_URL
+    if provider == "custom":
+        return base_url
+    return base_url or None
+
+
+def _default_model(provider: str) -> str:
+    if _normalize_provider(provider) == "openrouter":
+        return "openai/gpt-4o-mini"
+    return "gpt-4o-mini"

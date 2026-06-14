@@ -58,6 +58,7 @@ class ResearchLLM:
             self._model = ChatOpenAI(
                 model=config.openai_model,
                 api_key=config.openai_api_key,
+                base_url=config.llm_base_url,
                 temperature=0.2,
             )
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from deep_researcher.config import ResearchConfig
-from deep_researcher.embeddings import HashEmbeddings
+from deep_researcher.config import OPENROUTER_BASE_URL, ResearchConfig
+from deep_researcher.embeddings import HashEmbeddings, build_embeddings
 from deep_researcher.models import SourceDocument
 from deep_researcher.prompts import get_system_prompt, render_system_prompt
 from deep_researcher.search import parallel_tavily_search, tavily_search
@@ -18,6 +18,30 @@ def test_hash_embeddings_are_deterministic() -> None:
 
     assert first == second
     assert len(first) == 32
+
+
+def test_openrouter_env_sets_base_url_and_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LLM_PROVIDER", "openrouter")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-or-v1-test")
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+
+    config = ResearchConfig.from_env()
+
+    assert config.llm_provider == "openrouter"
+    assert config.llm_base_url == OPENROUTER_BASE_URL
+    assert config.openai_model == "openai/gpt-4o-mini"
+    assert not config.uses_direct_openai_api
+
+
+def test_openrouter_uses_local_hash_embeddings() -> None:
+    config = ResearchConfig(
+        openai_api_key="sk-or-v1-test",
+        llm_provider="openrouter",
+        openai_base_url=OPENROUTER_BASE_URL,
+    )
+
+    assert isinstance(build_embeddings(config), HashEmbeddings)
 
 
 def test_tavily_search_returns_notice_without_key() -> None:

@@ -14,6 +14,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from deep_researcher import DeepResearchWorkflow, ResearchConfig
+from deep_researcher.config import OPENROUTER_BASE_URL
 from deep_researcher.models import SourceDocument
 
 
@@ -81,15 +82,36 @@ def load_config_from_ui() -> ResearchConfig:
 
     openai_key = secrets.get("OPENAI_API_KEY") or config.openai_api_key
     tavily_key = secrets.get("TAVILY_API_KEY") or config.tavily_api_key
+    provider = secrets.get("LLM_PROVIDER") or config.llm_provider
+    base_url = secrets.get("OPENAI_BASE_URL") or config.openai_base_url or ""
     model = secrets.get("OPENAI_MODEL") or config.openai_model
 
     with st.sidebar:
         st.header("Configuration")
+        provider_label = _provider_label(provider)
+        provider_label = st.selectbox(
+            "API provider",
+            options=["OpenAI", "OpenRouter", "Custom OpenAI-compatible"],
+            index=["OpenAI", "OpenRouter", "Custom OpenAI-compatible"].index(provider_label),
+            help="Switches the OpenAI-compatible base URL used by all LLM agent calls.",
+        )
+        provider = _provider_value(provider_label)
+        if provider == "openrouter" and not base_url:
+            base_url = OPENROUTER_BASE_URL
+        if provider == "openai" and base_url == OPENROUTER_BASE_URL:
+            base_url = ""
+        if provider == "openrouter" and model == "gpt-4o-mini":
+            model = "openai/gpt-4o-mini"
+        base_url = st.text_input(
+            "OpenAI-compatible base URL",
+            value=base_url or "",
+            help="OpenRouter uses https://openrouter.ai/api/v1. Leave blank for OpenAI.",
+        )
         openai_key = st.text_input(
-            "OpenAI API key",
+            "LLM API key",
             value=openai_key or "",
             type="password",
-            help="Optional. Used for long-context synthesis and report writing.",
+            help="Use an OpenAI key for OpenAI, or an OpenRouter key for OpenRouter.",
         )
         tavily_key = st.text_input(
             "Tavily API key",
@@ -97,7 +119,7 @@ def load_config_from_ui() -> ResearchConfig:
             type="password",
             help="Optional. Used by the Contextual Retriever Agent for web search.",
         )
-        model = st.text_input("OpenAI model", value=model)
+        model = st.text_input("LLM model", value=model)
         max_web_results = st.slider("Max web results per investigation", 4, 16, _clamp(config.max_web_results, 4, 16))
         max_retrieval_docs = st.slider(
             "FAISS top-k chunks sent to LLM agents",
@@ -117,10 +139,17 @@ def load_config_from_ui() -> ResearchConfig:
         os.environ["OPENAI_API_KEY"] = openai_key
     if tavily_key:
         os.environ["TAVILY_API_KEY"] = tavily_key
+    os.environ["LLM_PROVIDER"] = provider
+    if base_url:
+        os.environ["OPENAI_BASE_URL"] = base_url
+    else:
+        os.environ.pop("OPENAI_BASE_URL", None)
 
     return ResearchConfig(
         openai_api_key=openai_key or None,
         tavily_api_key=tavily_key or None,
+        llm_provider=provider,
+        openai_base_url=base_url or None,
         openai_model=model,
         max_web_results=max_web_results,
         max_retrieval_docs=max_retrieval_docs,
@@ -148,6 +177,8 @@ def render_sidebar(config: ResearchConfig) -> None:
         )
         st.subheader("Runtime Status")
         st.write("LLM:", "enabled" if config.llm_enabled else "local fallback")
+        st.write("Provider:", _provider_label(config.llm_provider))
+        st.write("Base URL:", config.llm_base_url or "OpenAI default")
         st.write("Web search:", "enabled" if config.web_search_enabled else "local/upload-only")
         st.write("FAISS top-k:", config.max_retrieval_docs)
         st.write("Validator top-k:", config.validator_top_k)
@@ -254,6 +285,23 @@ def _streamlit_secrets() -> dict[str, str]:
 
 def _clamp(value: int, minimum: int, maximum: int) -> int:
     return max(minimum, min(value, maximum))
+
+
+def _provider_label(provider: str | None) -> str:
+    provider = (provider or "openai").strip().lower()
+    if provider == "openrouter":
+        return "OpenRouter"
+    if provider == "custom":
+        return "Custom OpenAI-compatible"
+    return "OpenAI"
+
+
+def _provider_value(label: str) -> str:
+    if label == "OpenRouter":
+        return "openrouter"
+    if label == "Custom OpenAI-compatible":
+        return "custom"
+    return "openai"
 
 
 if __name__ == "__main__":
