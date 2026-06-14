@@ -33,11 +33,21 @@ class SourceAssessment(BaseModel):
     caveats: str
 
 
+class ResearchPlan(BaseModel):
+    """Typed planning output from the Query Planning Agent."""
+
+    sub_questions: list[str] = Field(default_factory=list)
+    focus_areas: list[str] = Field(default_factory=list)
+    evidence_needs: list[str] = Field(default_factory=list)
+
+
 class ResearchState(TypedDict, total=False):
     """LangGraph state passed among all research agents."""
 
     query: str
+    thread_id: str
     local_documents: list[SourceDocument]
+    research_plan: ResearchPlan
     sub_questions: list[str]
     tavily_sources: list[SourceDocument]
     retrieved_context: list[SourceDocument]
@@ -51,5 +61,8 @@ class ResearchState(TypedDict, total=False):
     reproducible_snippet: str
     report: str
     report_revision_edits: list[str]
+    report_reflection_attempts: int
+    report_reflection_notes: list[str]
+    human_review_decision: str
     logs: list[str]
     errors: list[str]

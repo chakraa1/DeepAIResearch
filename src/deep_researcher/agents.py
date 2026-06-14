@@ -7,10 +7,10 @@ from urllib.parse import urlparse
 
 from deep_researcher.config import ResearchConfig
 from deep_researcher.llm import ResearchLLM
-from deep_researcher.models import ResearchState, SourceAssessment, SourceDocument
+from deep_researcher.models import ResearchPlan, ResearchState, SourceAssessment, SourceDocument
 from deep_researcher.prompts import get_system_prompt, render_system_prompt
-from deep_researcher.retrieval import retrieve_relevant_context
-from deep_researcher.search import SOURCE_SEARCH_QUERIES, parallel_tavily_search
+from deep_researcher.search import SOURCE_SEARCH_QUERIES
+from deep_researcher.tools import SafeToolRegistry, build_default_tool_registry
 
 
 class ResearchAgents:
@@ -19,6 +19,7 @@ class ResearchAgents:
     def __init__(self, config: ResearchConfig) -> None:
         self.config = config
         self.llm = ResearchLLM(config)
+        self.tools: SafeToolRegistry = build_default_tool_registry(config)
 
     def plan_research(self, state: ResearchState) -> ResearchState:
         """Query Planning Agent: decomposes a broad query into sub-questions."""
@@ -34,21 +35,19 @@ Return one sub-question per line."""
             get_system_prompt("query_planner"),
             prompt,
         )
-        sub_questions = _parse_lines(response)
-        if len(sub_questions) < 3:
-            sub_questions = [
-                f"What are the most important current facts about {query}?",
-                f"What evidence and primary sources best support claims about {query}?",
-                f"What contradictions, risks, or unresolved debates exist around {query}?",
-                f"What trends, hypotheses, or next-step implications emerge from {query}?",
-            ]
+        research_plan = _build_research_plan(query, response)
+        sub_questions = research_plan.sub_questions
 
         return {
             **state,
+            "research_plan": research_plan,
             "sub_questions": sub_questions[:5],
             "logs": [
                 *logs,
-                f"Query Planning Agent completed: generated {min(len(sub_questions), 5)} sub-questions.",
+                (
+                    "Query Planning Agent completed: generated typed ResearchPlan "
+                    f"with {min(len(sub_questions), 5)} sub-questions."
+                ),
             ],
         }
 
@@ -71,10 +70,14 @@ Return one sub-question per line."""
             contextual_prompt,
             "Create a concise retrieval plan for the configured source lanes before search.",
         )
-        web_sources = parallel_tavily_search(query, self.config)
+        web_sources = self.tools.execute("parallel_tavily_search", query=query)
 
         all_sources = _dedupe_sources([*state.get("local_documents", []), *web_sources])
-        retrieved_context = retrieve_relevant_context(query, all_sources, self.config)
+        retrieved_context = self.tools.execute(
+            "faiss_top_k_retrieval",
+            query=query,
+            sources=all_sources,
+        )
         if not retrieved_context:
             retrieved_context = all_sources[: self.config.max_retrieval_docs]
         retrieved_context = retrieved_context[: self.config.max_retrieval_docs]
@@ -123,6 +126,40 @@ Return one sub-question per line."""
                 f"Tuning to Relevant Context completed: {_limit_words(relevant_context_summary, 45)}",
                 f"FAISS Context Selector note: {_limit_words(selector_note, 40)}",
             ],
+        }
+
+    def review_before_report(self, state: ResearchState) -> ResearchState:
+        """Human review gate before report generation.
+
+        By default this auto-approves so Streamlit runs unattended. When
+        REQUIRE_HUMAN_REVIEW=true, LangGraph interrupt pauses here for approval.
+        """
+
+        logs = _with_logs(
+            state,
+            "Human Review Gate reached: reviewing synthesis before Report Builder.",
+        )
+        decision = "auto-approved"
+        if self.config.require_human_review:
+            try:
+                from langgraph.types import interrupt
+
+                decision_payload = interrupt(
+                    {
+                        "message": "Review before applying Report Builder.",
+                        "query": state["query"],
+                        "synthesis": state.get("synthesis", ""),
+                        "insights": state.get("insights", []),
+                    }
+                )
+                decision = str(decision_payload or "approved")
+            except Exception as exc:  # pragma: no cover - interactive runtime path
+                decision = f"interrupt-unavailable: {exc}"
+
+        return {
+            **state,
+            "human_review_decision": decision,
+            "logs": [*logs, f"Human Review Gate completed: {decision}."],
         }
 
     def assess_sources(self, state: ResearchState) -> ResearchState:
@@ -323,6 +360,41 @@ End with a ## SOURCES section using exactly this source format:
             ],
         }
 
+    def reflect_on_report(self, state: ResearchState) -> ResearchState:
+        """Reflection Agent: validates report and retries deterministic fixes."""
+
+        logs = _with_logs(
+            state,
+            "Report Reflection Agent started: validating report with retry limit.",
+        )
+        sources = state.get("retrieved_context", [])[: self.config.max_retrieval_docs]
+        report = state.get("report", "")
+        notes: list[str] = []
+        attempts = 0
+        issues = _validate_report_rules(report, self.config)
+
+        while issues and attempts < self.config.report_reflection_retry_limit:
+            attempts += 1
+            notes.append(f"Attempt {attempts}: fixed {', '.join(issues)}.")
+            report = _enforce_report_rules(report, sources, state["query"], self.config)
+            issues = _validate_report_rules(report, self.config)
+
+        if issues:
+            notes.append(f"Remaining issues after retry limit: {', '.join(issues)}.")
+        else:
+            notes.append("Report passed reflection validation.")
+
+        return {
+            **state,
+            "report": report,
+            "report_reflection_attempts": attempts,
+            "report_reflection_notes": notes,
+            "logs": [
+                *logs,
+                f"Report Reflection Agent completed: {attempts} retry attempt(s).",
+            ],
+        }
+
     def revise_report_inline(self, state: ResearchState) -> ResearchState:
         """Report Revision Agent: applies targeted Markdown section edits."""
 
@@ -457,6 +529,23 @@ def _parse_lines(text: str) -> list[str]:
     return lines
 
 
+def _build_research_plan(query: str, response: str) -> ResearchPlan:
+    sub_questions = _parse_lines(response)
+    if len(sub_questions) < 3:
+        sub_questions = [
+            f"What are the most important current facts about {query}?",
+            f"What evidence and primary sources best support claims about {query}?",
+            f"What contradictions, risks, or unresolved debates exist around {query}?",
+            f"What trends, hypotheses, or next-step implications emerge from {query}?",
+        ]
+
+    return ResearchPlan(
+        sub_questions=sub_questions[:5],
+        focus_areas=["facts", "source quality", "contradictions", "implications"],
+        evidence_needs=["research papers", "news articles", "reports", "APIs", "uploaded files"],
+    )
+
+
 def _extract_contradictions(text: str) -> list[str]:
     lines = [
         line
@@ -570,6 +659,32 @@ def _enforce_report_rules(
     if _word_count(report) > config.report_max_words:
         report = _trim_report(report, config.report_max_words)
     return _sanitize_report_text(report)
+
+
+def _validate_report_rules(report: str, config: ResearchConfig) -> list[str]:
+    issues: list[str] = []
+    stripped = report.strip()
+    first_line = next((line.strip() for line in stripped.splitlines() if line.strip()), "")
+    word_count = _word_count(stripped)
+
+    if not first_line.startswith("**"):
+        issues.append("missing bold hook")
+    if word_count < config.report_min_words:
+        issues.append("below minimum word count")
+    if word_count > config.report_max_words:
+        issues.append("above maximum word count")
+    if any(marker in stripped for marker in ("—", "–", "--")):
+        issues.append("banned dash form")
+    if "## SOURCES" not in stripped:
+        issues.append("missing sources section")
+    source_lines = [
+        line
+        for line in stripped.splitlines()
+        if line.startswith("[") and "] - " in line
+    ]
+    if len(source_lines) < 2:
+        issues.append("fewer than two source links")
+    return issues
 
 
 def _apply_inline_report_edits(

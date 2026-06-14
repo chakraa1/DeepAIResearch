@@ -51,9 +51,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Expose more model hyperparameters such as max tokens and top-p.",
     ),
     "1_2_tools": (
-        "partial",
-        "The app uses Tavily, FAISS, PDF parsing, and file upload capabilities, but agents do not call shell subprocess tools.",
-        "Add an explicit safe tool registry for source fetchers or report exporters.",
+        "implemented",
+        "SafeToolRegistry allowlists Tavily search, FAISS retrieval, and Markdown export tools for agent execution.",
+        "Add per-tool audit logs and user-visible tool invocation metadata.",
     ),
     "1_3_agent_graph": (
         "implemented",
@@ -61,9 +61,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Add conditional edges for retry or skip behavior based on state quality.",
     ),
     "1_4_structured_planning": (
-        "partial",
-        "Query Planning Agent creates sub-questions before retrieval, but it does not use with_structured_output yet.",
-        "Return a typed Pydantic planning object from the planner agent.",
+        "implemented",
+        "Query Planning Agent returns a typed ResearchPlan Pydantic object with sub-questions, focus areas, and evidence needs.",
+        "Add provider-native with_structured_output when live LLM providers support it.",
     ),
     "1_6_system_prompt": (
         "implemented",
@@ -86,9 +86,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Use structured LLM output for planner and source validation responses.",
     ),
     "2_2_self_correction_reflection": (
-        "partial",
-        "Report Builder applies deterministic rule enforcement after LLM generation, but there is no graph retry loop.",
-        "Add a reflection node with retry counters for report validation failures.",
+        "implemented",
+        "Report Reflection Agent validates report rules and applies deterministic fixes with a configurable retry counter.",
+        "Add LLM-generated critique messages for each failed validation rule.",
     ),
     "2_3_dynamic_rules": (
         "implemented",
@@ -116,9 +116,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Add a dedicated contradiction matrix agent.",
     ),
     "3_4_human_in_the_loop": (
-        "partial",
-        "The UI exposes transparent logs and downloadable reports, but no interrupt approval gate blocks graph execution.",
-        "Add a review gate before Report Builder using LangGraph interrupts.",
+        "implemented",
+        "Human Review Gate runs before Report Builder and can use LangGraph interrupt when REQUIRE_HUMAN_REVIEW is enabled.",
+        "Add Streamlit resume controls for interactive interrupt approval.",
     ),
     "3_5_parallel_generation": (
         "implemented",
@@ -126,9 +126,9 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Use LangGraph Send/reducers for graph-native parallel branches.",
     ),
     "3_6_time_travel": (
-        "partial",
-        "Session state keeps the latest workflow result, but LangGraph MemorySaver checkpointing is not enabled.",
-        "Add MemorySaver checkpointer and thread IDs for replayable research runs.",
+        "implemented",
+        "DeepResearchWorkflow compiles with MemorySaver and invokes/streams with configurable thread IDs.",
+        "Add a UI history browser for replaying checkpointed thread states.",
     ),
 }
 

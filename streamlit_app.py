@@ -26,7 +26,9 @@ AGENT_LABELS = {
     "critical_analysis": "Critical Analysis Agent",
     "insight_generation": "Insight Generation Agent",
     "reproducible_snippet": "Reproducible Snippet Agent",
+    "human_review_gate": "Human Review Gate",
     "report_builder": "Report Builder Agent",
+    "report_reflection": "Report Reflection Agent",
     "report_revision": "Report Revision Agent",
 }
 
@@ -137,10 +139,26 @@ def load_config_from_ui() -> ResearchConfig:
         report_min_words = st.slider("Report minimum words", 100, 300, _clamp(config.report_min_words, 100, 300))
         report_max_words = st.slider("Report maximum words", 200, 400, _clamp(config.report_max_words, 200, 400))
         report_max_words = max(report_max_words, report_min_words)
+        reflection_retry_limit = st.slider(
+            "Report reflection retry limit",
+            0,
+            5,
+            _clamp(config.report_reflection_retry_limit, 0, 5),
+        )
         generate_code_snippet = st.checkbox(
             "Generate reproducible Python snippet",
             value=config.generate_code_snippet,
             help="Adds a notebook-ready snippet that reproduces source counts and evidence checklist.",
+        )
+        require_human_review = st.checkbox(
+            "Require human review gate",
+            value=config.require_human_review,
+            help="Advanced: uses LangGraph interrupt before Report Builder. Leave off for unattended runs.",
+        )
+        checkpoint_thread_id = st.text_input(
+            "Checkpoint thread ID",
+            value=config.checkpoint_thread_id,
+            help="MemorySaver thread ID for replayable workflow checkpoints.",
         )
 
     if openai_key:
@@ -167,6 +185,9 @@ def load_config_from_ui() -> ResearchConfig:
         report_min_words=report_min_words,
         report_max_words=report_max_words,
         generate_code_snippet=generate_code_snippet,
+        report_reflection_retry_limit=reflection_retry_limit,
+        require_human_review=require_human_review,
+        checkpoint_thread_id=checkpoint_thread_id or "deep-research-default",
     )
 
 
@@ -182,8 +203,10 @@ def render_sidebar(config: ResearchConfig) -> None:
             4. Critical Analysis Agent
             5. Insight Generation Agent
             6. Reproducible Snippet Agent
-            7. Report Builder Agent
-            8. Report Revision Agent
+            7. Human Review Gate
+            8. Report Builder Agent
+            9. Report Reflection Agent
+            10. Report Revision Agent
             """
         )
         st.subheader("Runtime Status")
@@ -194,6 +217,8 @@ def render_sidebar(config: ResearchConfig) -> None:
         st.write("FAISS top-k:", config.max_retrieval_docs)
         st.write("Validator top-k:", config.validator_top_k)
         st.write("Report words:", f"{config.report_min_words}-{config.report_max_words}")
+        st.write("Reflection retries:", config.report_reflection_retry_limit)
+        st.write("Checkpoint thread:", config.checkpoint_thread_id)
         render_concept_alignment()
 
 
@@ -268,6 +293,13 @@ def render_results(state: dict) -> None:
         with st.expander("Report inline edits", expanded=False):
             for edit in revision_edits:
                 st.write(f"- {edit}")
+
+    reflection_notes = state.get("report_reflection_notes", [])
+    if reflection_notes:
+        with st.expander("Report reflection notes", expanded=False):
+            st.write(f"Attempts: {state.get('report_reflection_attempts', 0)}")
+            for note in reflection_notes:
+                st.write(f"- {note}")
 
     snippet = state.get("reproducible_snippet", "")
     if snippet:

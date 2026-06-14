@@ -5,9 +5,10 @@ import pytest
 from deep_researcher.config import OPENROUTER_BASE_URL, ResearchConfig
 from deep_researcher.concepts import coverage_table_rows, load_concepts, score_concept_coverage
 from deep_researcher.embeddings import HashEmbeddings, build_embeddings
-from deep_researcher.models import SourceDocument
+from deep_researcher.models import ResearchPlan, SourceDocument
 from deep_researcher.prompts import get_system_prompt, render_system_prompt
 from deep_researcher.search import parallel_tavily_search, tavily_search
+from deep_researcher.tools import build_default_tool_registry
 from deep_researcher.workflow import DeepResearchWorkflow
 
 
@@ -30,13 +31,32 @@ def test_concepts_json_loads_and_scores_alignment() -> None:
     assert score.chapter == "Orion Tutorial - Consolidated Agent Curriculum and Design Patterns"
     assert score.max_score == 10
     assert 0 < score.score <= 10
-    assert score.implemented_count >= 11
-    assert score.partial_count >= 5
+    assert score.implemented_count >= 16
+    assert score.partial_count == 1
     assert len(rows) == 17
     assert any(row["Concept"] == "1.3 Agent Graph & Smart Routing" for row in rows)
     assert not any(row["Concept"] == "1.5 Code Generation" for row in rows)
-    inline_edit = next(row for row in rows if row["Concept"] == "2.4 Inline Edit")
-    assert inline_edit["Status"] == "Implemented"
+    for concept in (
+        "1.2 Tools & Shell Command Execution",
+        "1.4 Structured Planning",
+        "2.2 AI Code Review with Retry Limit",
+        "2.4 Inline Edit",
+        "3.4 Human Approval Gate",
+        "3.6 State Checkpointing & Time Travel",
+    ):
+        row = next(row for row in rows if row["Concept"] == concept)
+        assert row["Status"] == "Implemented"
+
+
+def test_safe_tool_registry_allows_known_tools_and_rejects_unknown() -> None:
+    registry = build_default_tool_registry(ResearchConfig(tavily_api_key=None))
+    tool_names = {tool["name"] for tool in registry.list_tools()}
+
+    assert {"parallel_tavily_search", "faiss_top_k_retrieval", "markdown_report_export"} <= tool_names
+    export = registry.execute("markdown_report_export", report="# Report")
+    assert export["filename"] == "deep_research_report.md"
+    with pytest.raises(KeyError):
+        registry.execute("shell", command="rm -rf /")
 
 
 def test_openrouter_env_sets_base_url_and_model(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -191,9 +211,13 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     result = workflow.run(
         "What trends and risks shape enterprise AI agent adoption?",
         local_documents=documents,
+        thread_id="test-thread-inline",
     )
 
     assert result["report"]
+    assert result["thread_id"] == "test-thread-inline"
+    assert isinstance(result["research_plan"], ResearchPlan)
+    assert result["research_plan"].sub_questions
     assert result["report"].splitlines()[0].startswith("**")
     assert "## SOURCES" in result["report"]
     assert len(result["retrieved_context"]) <= 3
@@ -201,9 +225,14 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     assert result["relevant_context_summary"]
     assert result["reproducible_snippet"].startswith("```python")
     assert "sources =" in result["reproducible_snippet"]
+    assert result["human_review_decision"] == "auto-approved"
+    assert result["report_reflection_notes"]
+    assert result["report_reflection_attempts"] >= 0
     assert result["report_revision_edits"]
     assert any("Sources section:" in edit for edit in result["report_revision_edits"])
     assert any("Contextual Retriever prompt plan:" in log for log in result["logs"])
     assert any("Tuning to Relevant Context completed:" in log for log in result["logs"])
     assert any("Reproducible Snippet Agent completed:" in log for log in result["logs"])
+    assert any("Human Review Gate completed:" in log for log in result["logs"])
+    assert any("Report Reflection Agent completed:" in log for log in result["logs"])
     assert result["logs"][-2].startswith("Report Revision Agent completed:")

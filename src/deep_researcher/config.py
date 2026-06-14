@@ -27,6 +27,9 @@ class ResearchConfig:
     report_min_words: int = 200
     report_max_words: int = 300
     generate_code_snippet: bool = True
+    report_reflection_retry_limit: int = 2
+    require_human_review: bool = False
+    checkpoint_thread_id: str = "deep-research-default"
     chunk_size: int = 1_000
     chunk_overlap: int = 150
 
@@ -51,6 +54,9 @@ class ResearchConfig:
             report_min_words=_read_int("REPORT_MIN_WORDS", 200),
             report_max_words=_read_int("REPORT_MAX_WORDS", 300),
             generate_code_snippet=_read_bool("GENERATE_CODE_SNIPPET", True),
+            report_reflection_retry_limit=_read_int("REPORT_REFLECTION_RETRY_LIMIT", 2),
+            require_human_review=_read_bool("REQUIRE_HUMAN_REVIEW", False),
+            checkpoint_thread_id=os.getenv("CHECKPOINT_THREAD_ID", "deep-research-default"),
         )
 
     @property

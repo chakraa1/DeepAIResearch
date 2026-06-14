@@ -60,10 +60,24 @@
           </p>
         </article>
         <article>
+          <h2>Human Review Gate</h2>
+          <p>
+            Can pause before report generation with LangGraph interrupts, then
+            auto-approves by default for unattended demos.
+          </p>
+        </article>
+        <article>
           <h2>Report Builder</h2>
           <p>
             Builds a 200-300 word rules-checked report with source links and a
             human senior-engineer tone.
+          </p>
+        </article>
+        <article>
+          <h2>Report Reflection</h2>
+          <p>
+            Validates report rules with retry counters before targeted inline
+            edits finalize the Markdown.
           </p>
         </article>
         <article>
@@ -88,7 +102,9 @@
           <li>Top 3 context is sent to Source Validator and LLM agents.</li>
           <li>Critical Analysis and Insight Generation produce concise findings.</li>
           <li>Reproducible Snippet Agent creates notebook-ready Python.</li>
+          <li>Human Review Gate approves or pauses the report build.</li>
           <li>Report Builder compiles the final structured report.</li>
+          <li>Report Reflection Agent validates with retry counters.</li>
           <li>Report Revision Agent applies targeted inline edits.</li>
         </ol>
       </section>
