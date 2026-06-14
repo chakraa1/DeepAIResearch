@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from deep_researcher.config import ResearchConfig
 from deep_researcher.embeddings import build_embeddings

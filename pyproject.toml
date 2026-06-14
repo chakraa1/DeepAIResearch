@@ -13,6 +13,7 @@ dependencies = [
     "langchain",
     "langchain-community",
     "langchain-openai",
+    "langchain-text-splitters",
     "langgraph",
     "faiss-cpu",
     "tavily-python",

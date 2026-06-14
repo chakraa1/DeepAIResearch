@@ -68,6 +68,7 @@ def main() -> None:
             st.warning("Enter a research question first.")
             return
         run_research(query.strip(), uploaded_files, config)
+        return
 
     if "last_report" in st.session_state:
         st.divider()
