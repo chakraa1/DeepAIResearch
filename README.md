@@ -87,6 +87,27 @@ Current computed concept alignment:
 Open the Streamlit sidebar section **Hackathon concept alignment** to view the
 full evidence table and next improvements for each concept.
 
+| Concept | Pattern | Importance | Status | Evidence | Next improvement |
+|---|---|---|---|---|---|
+| 1.1 LLM Setup | Model Initialization | Critical | Implemented | ResearchLLM initializes ChatOpenAI with OpenAI/OpenRouter/custom provider config and temperature. | Expose more model hyperparameters such as max tokens and top-p. |
+| 1.2 Tools & Shell Command Execution | Tool Use | High | Partial | The app uses Tavily, FAISS, PDF parsing, and file upload capabilities, but agents do not call shell subprocess tools. | Add an explicit safe tool registry for source fetchers or report exporters. |
+| 1.3 Agent Graph & Smart Routing | Routing | Critical | Implemented | DeepResearchWorkflow builds a LangGraph node network for planner, retriever, validator, analysis, insights, and report builder. | Add conditional edges for retry or skip behavior based on state quality. |
+| 1.4 Structured Planning | Planning | High | Partial | Query Planning Agent creates sub-questions before retrieval, but it does not use with_structured_output yet. | Return a typed Pydantic planning object from the planner agent. |
+| 1.5 Code Generation | Code Generation | High | Not Targeted | The product generates research reports, not executable code artifacts. | Add an optional code/notebook generation agent for reproducible research snippets. |
+| 1.6 System Prompt | Persona & Constraint Management | High | Implemented | System prompts are centralized in system_prompts.yaml with explicit roles and runtime placeholders. | Add prompt version metadata and per-agent prompt tests. |
+| 1.7 Streaming | UX Event Streaming | Medium | Implemented | DeepResearchWorkflow.stream emits graph node updates that Streamlit renders step by step. | Add token-level streaming when provider APIs support it. |
+| 1.8 Multi Turn Conversation | Session Memory | Medium | Partial | Streamlit session_state stores the last report and state for a session, but durable conversation memory is not implemented. | Persist research sessions and allow follow-up questions over prior state. |
+| 2.1 Structured Output & File Generation | Structured Output + State | High | Implemented | Pydantic models and TypedDict state define source documents, assessments, and workflow state. | Use structured LLM output for planner and source validation responses. |
+| 2.2 AI Code Review with Retry Limit | Reflection + Exception Handling | High | Partial | Report Builder applies deterministic rule enforcement after LLM generation, but there is no graph retry loop. | Add a reflection node with retry counters for report validation failures. |
+| 2.3 Dynamic Rules | Dynamic Guardrails | Medium | Implemented | Report word limits, top-k limits, provider selection, and report guardrails are config-driven and state-aware. | Allow users to choose different report rule profiles from the UI. |
+| 2.4 Inline Edit | Targeted Delta Patches | Medium | Not Targeted | This app does not edit existing files during runtime. | Add a report revision agent that applies targeted edits to generated Markdown sections. |
+| 3.1 Codebase RAG & Semantic Code Search | Knowledge Retrieval | High | Implemented | FAISS retrieval indexes uploaded documents and Tavily results for grounded context selection. | Add optional repository/code indexing for technical research tasks. |
+| 3.2 Orchestrator State | State Orchestration | Critical | Implemented | ResearchState carries sub-questions, sources, tuned context, assessments, synthesis, insights, report, and logs across agents. | Persist state snapshots for comparison across runs. |
+| 3.3 Multi-Agent Code Generation per File | Multi-Agent | Critical | Implemented | Specialized LangGraph nodes divide scope across planning, retrieval, validation, analysis, insight generation, and reporting. | Add a dedicated contradiction matrix agent. |
+| 3.4 Human Approval Gate | Human-in-the-Loop | High | Partial | The UI exposes transparent logs and downloadable reports, but no interrupt approval gate blocks graph execution. | Add a review gate before Report Builder using LangGraph interrupts. |
+| 3.5 Parallel File Generation | Parallelization | Medium | Implemented | Contextual Retriever runs parallel Tavily source lanes for papers, news, reports, and APIs before merging sources. | Use LangGraph Send/reducers for graph-native parallel branches. |
+| 3.6 State Checkpointing & Time Travel | Memory Management | Medium | Partial | Session state keeps the latest workflow result, but LangGraph MemorySaver checkpointing is not enabled. | Add MemorySaver checkpointer and thread IDs for replayable research runs. |
+
 ## Quick start
 
 ```bash
