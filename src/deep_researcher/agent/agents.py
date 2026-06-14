@@ -6,10 +6,10 @@ import re
 from urllib.parse import urlparse
 
 from deep_researcher.config import ResearchConfig
-from deep_researcher.llm import ResearchLLM
-from deep_researcher.models import ResearchPlan, ResearchState, SourceAssessment, SourceDocument
-from deep_researcher.prompts import get_system_prompt, render_system_prompt
-from deep_researcher.search import SOURCE_SEARCH_QUERIES
+from deep_researcher.agent.llm import ResearchLLM
+from deep_researcher.agent.prompts import get_system_prompt, render_system_prompt
+from deep_researcher.main.models import ResearchPlan, ResearchState, SourceAssessment, SourceDocument
+from deep_researcher.tools.search import SOURCE_SEARCH_QUERIES
 from deep_researcher.tools import SafeToolRegistry, build_default_tool_registry
 
 

@@ -15,9 +15,9 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from deep_researcher import DeepResearchWorkflow, ResearchConfig
-from deep_researcher.concepts import coverage_table_rows, score_concept_coverage
 from deep_researcher.config import OPENROUTER_BASE_URL
-from deep_researcher.models import SourceDocument
+from deep_researcher.config.concepts import coverage_table_rows, score_concept_coverage
+from deep_researcher.main.models import SourceDocument
 
 
 AGENT_LABELS = {

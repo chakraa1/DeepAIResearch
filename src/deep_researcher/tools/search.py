@@ -5,7 +5,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from deep_researcher.config import ResearchConfig
-from deep_researcher.models import SourceDocument
+from deep_researcher.main.models import SourceDocument
 
 
 SOURCE_SEARCH_QUERIES = {

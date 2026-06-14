@@ -88,9 +88,9 @@ flowchart TD
 
 ## Hackathon concept alignment
 
-The accelerator concept list is stored in `src/deep_researcher/concepts.json`.
+The accelerator concept list is stored in `src/deep_researcher/config/concepts.json`.
 The app loads it at runtime and maps each concept to implementation evidence in
-`src/deep_researcher/concepts.py`.
+`src/deep_researcher/config/concepts.py`.
 
 Current computed concept alignment:
 
@@ -126,8 +126,8 @@ full evidence table and next improvements for each concept.
 
 | Concept | Requested improvement | Implementation evidence |
 |---|---|---|
-| 1.2 Tools & Shell Command Execution | Add an explicit safe tool registry for source fetchers or report exporters. | `src/deep_researcher/tools.py` defines `SafeToolRegistry` with allowlisted `parallel_tavily_search`, `faiss_top_k_retrieval`, and `markdown_report_export` tools. |
-| 1.4 Structured Planning | Return a typed Pydantic planning object from the planner agent. | `ResearchPlan` in `src/deep_researcher/models.py` carries `sub_questions`, `focus_areas`, and `evidence_needs`; Query Planning Agent stores it in workflow state. |
+| 1.2 Tools & Shell Command Execution | Add an explicit safe tool registry for source fetchers or report exporters. | `src/deep_researcher/tools/registry.py` defines `SafeToolRegistry` with allowlisted `parallel_tavily_search`, `faiss_top_k_retrieval`, and `markdown_report_export` tools. |
+| 1.4 Structured Planning | Return a typed Pydantic planning object from the planner agent. | `ResearchPlan` in `src/deep_researcher/main/models.py` carries `sub_questions`, `focus_areas`, and `evidence_needs`; Query Planning Agent stores it in workflow state. |
 | 2.2 AI Code Review with Retry Limit | Add a reflection node with retry counters for report validation failures. | `Report Reflection Agent` validates report rules after Report Builder and uses `REPORT_REFLECTION_RETRY_LIMIT` for retry control. |
 | 3.4 Human Approval Gate | Add a review gate before Report Builder using LangGraph interrupts. | `Human Review Gate` runs before Report Builder and calls LangGraph `interrupt` when `REQUIRE_HUMAN_REVIEW=true`; it auto-approves by default for demos. |
 | 3.6 State Checkpointing & Time Travel | Add MemorySaver checkpointer and thread IDs for replayable research runs. | `DeepResearchWorkflow` compiles with `MemorySaver` and runs with configurable `CHECKPOINT_THREAD_ID`. |
@@ -237,19 +237,23 @@ pytest
 ├── scripts/
 │   └── install_windows.ps1
 ├── src/deep_researcher/
-│   ├── agents.py
-│   ├── concepts.json
-│   ├── concepts.py
-│   ├── config.py
-│   ├── embeddings.py
-│   ├── llm.py
-│   ├── models.py
-│   ├── prompts.py
-│   ├── retrieval.py
-│   ├── search.py
-│   ├── system_prompts.yaml
-│   ├── tools.py
-│   └── workflow.py
+│   ├── agent/
+│   │   ├── agents.py
+│   │   ├── llm.py
+│   │   ├── prompts.py
+│   │   └── system_prompts.yaml
+│   ├── config/
+│   │   ├── concepts.json
+│   │   ├── concepts.py
+│   │   └── settings.py
+│   ├── main/
+│   │   ├── models.py
+│   │   └── workflow.py
+│   └── tools/
+│       ├── embeddings.py
+│       ├── registry.py
+│       ├── retrieval.py
+│       └── search.py
 └── tests/
     └── test_offline_workflow.py
 ```

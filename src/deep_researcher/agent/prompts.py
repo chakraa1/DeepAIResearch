@@ -12,7 +12,7 @@ import yaml
 def load_system_prompts() -> dict[str, dict[str, str]]:
     """Load all system prompts once per process."""
 
-    prompt_file = resources.files("deep_researcher").joinpath("system_prompts.yaml")
+    prompt_file = resources.files("deep_researcher.agent").joinpath("system_prompts.yaml")
     with prompt_file.open("r", encoding="utf-8") as file:
         prompts = yaml.safe_load(file) or {}
     return prompts

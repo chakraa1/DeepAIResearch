@@ -11,9 +11,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from deep_researcher.config import ResearchConfig
-from deep_researcher.models import SourceDocument
-from deep_researcher.retrieval import retrieve_relevant_context
-from deep_researcher.search import parallel_tavily_search
+from deep_researcher.tools.retrieval import retrieve_relevant_context
+from deep_researcher.tools.search import parallel_tavily_search
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,9 +8,9 @@ from typing import Any
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
-from deep_researcher.agents import ResearchAgents
+from deep_researcher.agent.agents import ResearchAgents
 from deep_researcher.config import ResearchConfig
-from deep_researcher.models import ResearchState, SourceDocument
+from deep_researcher.main.models import ResearchState, SourceDocument
 
 
 class DeepResearchWorkflow:

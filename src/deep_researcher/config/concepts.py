@@ -135,7 +135,7 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
 
 @lru_cache(maxsize=1)
 def load_concept_payload() -> dict:
-    concept_file = resources.files("deep_researcher").joinpath("concepts.json")
+    concept_file = resources.files("deep_researcher.config").joinpath("concepts.json")
     with concept_file.open("r", encoding="utf-8") as file:
         return json.load(file)
 

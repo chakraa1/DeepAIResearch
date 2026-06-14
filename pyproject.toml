@@ -32,7 +32,8 @@ dev = ["pytest"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-deep_researcher = ["system_prompts.yaml", "concepts.json"]
+"deep_researcher.agent" = ["system_prompts.yaml"]
+"deep_researcher.config" = ["concepts.json"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

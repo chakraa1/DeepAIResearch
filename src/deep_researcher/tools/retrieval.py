@@ -7,8 +7,8 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from deep_researcher.config import ResearchConfig
-from deep_researcher.embeddings import build_embeddings
-from deep_researcher.models import SourceDocument
+from deep_researcher.main.models import SourceDocument
+from deep_researcher.tools.embeddings import build_embeddings
 
 
 def split_sources(

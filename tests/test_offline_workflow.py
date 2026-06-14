@@ -3,13 +3,13 @@ from __future__ import annotations
 import pytest
 
 from deep_researcher.config import OPENROUTER_BASE_URL, ResearchConfig
-from deep_researcher.concepts import coverage_table_rows, load_concepts, score_concept_coverage
-from deep_researcher.embeddings import HashEmbeddings, build_embeddings
-from deep_researcher.models import ResearchPlan, SourceDocument
-from deep_researcher.prompts import get_system_prompt, render_system_prompt
-from deep_researcher.search import parallel_tavily_search, tavily_search
+from deep_researcher.config.concepts import coverage_table_rows, load_concepts, score_concept_coverage
+from deep_researcher.main.models import ResearchPlan, SourceDocument
+from deep_researcher.main.workflow import DeepResearchWorkflow
+from deep_researcher.agent.prompts import get_system_prompt, render_system_prompt
+from deep_researcher.tools.embeddings import HashEmbeddings, build_embeddings
+from deep_researcher.tools.search import parallel_tavily_search, tavily_search
 from deep_researcher.tools import build_default_tool_registry
-from deep_researcher.workflow import DeepResearchWorkflow
 
 
 def test_hash_embeddings_are_deterministic() -> None:
