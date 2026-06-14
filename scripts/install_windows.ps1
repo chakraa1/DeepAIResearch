@@ -18,11 +18,12 @@ if (-not (Test-Path $ProjectPath)) {
 
 Set-Location $ProjectPath
 
-$streamlitApp = "src\deep_researcher\main\streamlit_app.py"
+$streamlitApp = "app.py"
+$internalStreamlitApp = "src\deep_researcher\main\streamlit_app.py"
 $envExample = "src\deep_researcher\config\.env.example"
 
-if (-not (Test-Path "requirements.txt") -or -not (Test-Path $streamlitApp)) {
-    throw "This folder does not look like the DeepAIResearch project. Missing requirements.txt or $streamlitApp."
+if (-not (Test-Path "requirements.txt") -or -not (Test-Path $streamlitApp) -or -not (Test-Path $internalStreamlitApp)) {
+    throw "This folder does not look like the DeepAIResearch project. Missing requirements.txt, $streamlitApp, or $internalStreamlitApp."
 }
 
 Write-Step "Checking Python"

@@ -174,11 +174,21 @@ OPENAI_MODEL=gpt-4o-mini
 Run the app:
 
 ```bash
-streamlit run src/deep_researcher/main/streamlit_app.py
+streamlit run app.py
 ```
 
 The UI also lets you select the API provider, switch base URLs, choose the
 model, and paste keys into the sidebar for a one-off session.
+
+## Free live Streamlit hosting
+
+The repo includes a root `app.py` entrypoint for free Streamlit-capable hosts.
+
+- **Streamlit Community Cloud:** use `app.py` as the app file.
+- **Hugging Face Spaces:** create a Streamlit Space and use `app.py`.
+- Add your OpenRouter/OpenAI and Tavily keys as host secrets.
+
+See `docs/free-hosting.md` for step-by-step deployment instructions.
 
 ## Windows install at `G:\Outskill\Hackathon\DeepAIResearch`
 
@@ -206,7 +216,7 @@ After installation, start the app anytime with:
 
 ```powershell
 cd G:\Outskill\Hackathon\DeepAIResearch
-.\.venv\Scripts\streamlit.exe run src\deep_researcher\main\streamlit_app.py
+.\.venv\Scripts\streamlit.exe run app.py
 ```
 
 ## Running without API keys
@@ -231,8 +241,11 @@ pytest
 
 ```text
 .
+├── app.py
 ├── requirements.txt
 ├── pyproject.toml
+├── docs/
+│   └── free-hosting.md
 ├── scripts/
 │   └── install_windows.ps1
 ├── src/deep_researcher/
