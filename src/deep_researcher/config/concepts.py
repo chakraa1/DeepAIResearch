@@ -67,7 +67,7 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
     ),
     "1_6_system_prompt": (
         "implemented",
-        "System prompts are centralized in system_prompts.yaml with explicit roles and runtime placeholders.",
+        "System prompts are centralized in config/system_prompts.yaml with explicit roles and runtime placeholders.",
         "Add prompt version metadata and per-agent prompt tests.",
     ),
     "1_7_streaming": (

@@ -108,7 +108,7 @@ full evidence table and next improvements for each concept.
 | 1.2 Tools & Shell Command Execution | Tool Use | High | Implemented | SafeToolRegistry allowlists Tavily search, FAISS retrieval, and Markdown export tools for agent execution. | Add per-tool audit logs and user-visible tool invocation metadata. |
 | 1.3 Agent Graph & Smart Routing | Routing | Critical | Implemented | DeepResearchWorkflow builds a LangGraph node network for planner, retriever, validator, analysis, insights, and report builder. | Add conditional edges for retry or skip behavior based on state quality. |
 | 1.4 Structured Planning | Planning | High | Implemented | Query Planning Agent returns a typed ResearchPlan Pydantic object with sub-questions, focus areas, and evidence needs. | Add provider-native with_structured_output when live LLM providers support it. |
-| 1.6 System Prompt | Persona & Constraint Management | High | Implemented | System prompts are centralized in system_prompts.yaml with explicit roles and runtime placeholders. | Add prompt version metadata and per-agent prompt tests. |
+| 1.6 System Prompt | Persona & Constraint Management | High | Implemented | System prompts are centralized in `src/deep_researcher/config/system_prompts.yaml` with explicit roles and runtime placeholders. | Add prompt version metadata and per-agent prompt tests. |
 | 1.7 Streaming | UX Event Streaming | Medium | Implemented | DeepResearchWorkflow.stream emits graph node updates that Streamlit renders step by step. | Add token-level streaming when provider APIs support it. |
 | 1.8 Multi Turn Conversation | Session Memory | Medium | Partial | Streamlit session_state stores the last report and state for a session, but durable conversation memory is not implemented. | Persist research sessions and allow follow-up questions over prior state. |
 | 2.1 Structured Output & File Generation | Structured Output + State | High | Implemented | Pydantic models and TypedDict state define source documents, assessments, and workflow state. | Use structured LLM output for planner and source validation responses. |
@@ -138,7 +138,7 @@ full evidence table and next improvements for each concept.
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
+cp src/deep_researcher/config/.env.example .env
 ```
 
 Edit `.env` and add keys if available:
@@ -174,7 +174,7 @@ OPENAI_MODEL=openai/gpt-4o-mini
 Run the app:
 
 ```bash
-streamlit run streamlit_app.py
+streamlit run src/deep_researcher/main/streamlit_app.py
 ```
 
 The UI also lets you select the API provider, switch base URLs, choose the
@@ -206,7 +206,7 @@ After installation, start the app anytime with:
 
 ```powershell
 cd G:\Outskill\Hackathon\DeepAIResearch
-.\.venv\Scripts\streamlit.exe run streamlit_app.py
+.\.venv\Scripts\streamlit.exe run src\deep_researcher\main\streamlit_app.py
 ```
 
 ## Running without API keys
@@ -231,7 +231,6 @@ pytest
 
 ```text
 .
-├── streamlit_app.py
 ├── requirements.txt
 ├── pyproject.toml
 ├── scripts/
@@ -240,14 +239,16 @@ pytest
 │   ├── agent/
 │   │   ├── agents.py
 │   │   ├── llm.py
-│   │   ├── prompts.py
-│   │   └── system_prompts.yaml
+│   │   └── prompts.py
 │   ├── config/
+│   │   ├── .env.example
 │   │   ├── concepts.json
 │   │   ├── concepts.py
+│   │   ├── system_prompts.yaml
 │   │   └── settings.py
 │   ├── main/
 │   │   ├── models.py
+│   │   ├── streamlit_app.py
 │   │   └── workflow.py
 │   └── tools/
 │       ├── embeddings.py

@@ -18,8 +18,11 @@ if (-not (Test-Path $ProjectPath)) {
 
 Set-Location $ProjectPath
 
-if (-not (Test-Path "requirements.txt") -or -not (Test-Path "streamlit_app.py")) {
-    throw "This folder does not look like the DeepAIResearch project. Missing requirements.txt or streamlit_app.py."
+$streamlitApp = "src\deep_researcher\main\streamlit_app.py"
+$envExample = "src\deep_researcher\config\.env.example"
+
+if (-not (Test-Path "requirements.txt") -or -not (Test-Path $streamlitApp)) {
+    throw "This folder does not look like the DeepAIResearch project. Missing requirements.txt or $streamlitApp."
 }
 
 Write-Step "Checking Python"
@@ -57,23 +60,23 @@ Write-Step "Installing Python dependencies"
 & $venvPip install -r requirements.txt
 
 Write-Step "Preparing environment file"
-if (-not (Test-Path ".env") -and (Test-Path ".env.example")) {
-    Copy-Item ".env.example" ".env"
+if (-not (Test-Path ".env") -and (Test-Path $envExample)) {
+    Copy-Item $envExample ".env"
     Write-Host "Created .env from .env.example. Add OPENAI_API_KEY and TAVILY_API_KEY for full web research."
 } elseif (Test-Path ".env") {
     Write-Host ".env already exists; leaving it unchanged."
 }
 
 Write-Step "Verifying installation"
-& $venvPython -m compileall streamlit_app.py src tests
+& $venvPython -m compileall $streamlitApp src tests
 
 Write-Host ""
 Write-Host "Installation complete." -ForegroundColor Green
 Write-Host "To start the app:"
 Write-Host "  cd `"$ProjectPath`""
-Write-Host "  .\.venv\Scripts\streamlit.exe run streamlit_app.py"
+Write-Host "  .\.venv\Scripts\streamlit.exe run $streamlitApp"
 
 if ($Run) {
     Write-Step "Starting Streamlit"
-    & $venvStreamlit run streamlit_app.py
+    & $venvStreamlit run $streamlitApp
 }
