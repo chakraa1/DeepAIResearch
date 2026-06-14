@@ -60,6 +60,35 @@ streamlit run streamlit_app.py
 
 The UI also lets you paste API keys into the sidebar for a one-off session.
 
+## Windows install at `G:\Outskill\Hackathon\DeepAIResearch`
+
+Clone or copy this repository to:
+
+```powershell
+G:\Outskill\Hackathon\DeepAIResearch
+```
+
+Then run PowerShell:
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+cd G:\Outskill\Hackathon\DeepAIResearch
+.\scripts\install_windows.ps1
+```
+
+To install and launch Streamlit in one command:
+
+```powershell
+.\scripts\install_windows.ps1 -Run
+```
+
+After installation, start the app anytime with:
+
+```powershell
+cd G:\Outskill\Hackathon\DeepAIResearch
+.\.venv\Scripts\streamlit.exe run streamlit_app.py
+```
+
 ## Running without API keys
 
 The project is still usable for demos without keys:
@@ -85,6 +114,8 @@ pytest
 ├── streamlit_app.py
 ├── requirements.txt
 ├── pyproject.toml
+├── scripts/
+│   └── install_windows.ps1
 ├── src/deep_researcher/
 │   ├── agents.py
 │   ├── config.py
