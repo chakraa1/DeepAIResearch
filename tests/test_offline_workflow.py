@@ -5,7 +5,7 @@ import pytest
 from deep_researcher.config import ResearchConfig
 from deep_researcher.embeddings import HashEmbeddings
 from deep_researcher.models import SourceDocument
-from deep_researcher.prompts import get_system_prompt
+from deep_researcher.prompts import get_system_prompt, render_system_prompt
 from deep_researcher.search import parallel_tavily_search, tavily_search
 from deep_researcher.workflow import DeepResearchWorkflow
 
@@ -46,6 +46,21 @@ def test_cached_yaml_prompt_includes_explicit_role() -> None:
     assert "SOURCE_LINKS" in prompt
 
 
+def test_contextual_retriever_prompt_renders_query_placeholders() -> None:
+    prompt = render_system_prompt(
+        "contextual_retriever",
+        query="enterprise AI agent adoption",
+        source_lanes="research_papers, news_articles, reports, apis",
+        top_k=3,
+    )
+
+    assert "Role: Contextual Retriever Agent" in prompt
+    assert "Input query: enterprise AI agent adoption" in prompt
+    assert "Source lanes: research_papers, news_articles, reports, apis" in prompt
+    assert "FAISS top-k passed to LLM agents: 3" in prompt
+    assert "{query}" not in prompt
+
+
 def test_offline_workflow_generates_report_from_local_sources() -> None:
     pytest.importorskip("faiss")
     pytest.importorskip("langgraph")
@@ -80,4 +95,5 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     assert "## SOURCES" in result["report"]
     assert len(result["retrieved_context"]) <= 3
     assert result["retrieved_context"]
+    assert any("Contextual Retriever prompt plan:" in log for log in result["logs"])
     assert result["logs"][-1] == "Report Builder Agent completed: compiled the final rules-checked report."

@@ -30,3 +30,9 @@ def get_system_prompt(prompt_key: str) -> str:
     role = entry.get("role", prompt_key)
     prompt = entry.get("prompt", "")
     return f"Role: {role}\n\n{prompt}".strip()
+
+
+def render_system_prompt(prompt_key: str, **values: object) -> str:
+    """Render a cached prompt template with runtime values."""
+
+    return get_system_prompt(prompt_key).format(**values)

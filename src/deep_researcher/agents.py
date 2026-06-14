@@ -8,7 +8,7 @@ from urllib.parse import urlparse
 from deep_researcher.config import ResearchConfig
 from deep_researcher.llm import ResearchLLM
 from deep_researcher.models import ResearchState, SourceAssessment, SourceDocument
-from deep_researcher.prompts import get_system_prompt
+from deep_researcher.prompts import get_system_prompt, render_system_prompt
 from deep_researcher.retrieval import retrieve_relevant_context
 from deep_researcher.search import SOURCE_SEARCH_QUERIES, parallel_tavily_search
 
@@ -60,6 +60,17 @@ Return one sub-question per line."""
             state,
             "Contextual Retriever Agent started: parallel Tavily lanes are research papers, news, reports, and APIs.",
         )
+        source_lanes = ", ".join(SOURCE_SEARCH_QUERIES.keys())
+        contextual_prompt = render_system_prompt(
+            "contextual_retriever",
+            query=query,
+            source_lanes=source_lanes,
+            top_k=self.config.max_retrieval_docs,
+        )
+        retrieval_plan = self.llm.generate(
+            contextual_prompt,
+            "Create a concise retrieval plan for the configured source lanes before search.",
+        )
         web_sources = parallel_tavily_search(query, self.config)
 
         all_sources = _dedupe_sources([*state.get("local_documents", []), *web_sources])
@@ -91,6 +102,7 @@ Confirm in one short paragraph why these results should be passed to the LLM age
                     f"collected {len(all_sources)} source documents, and selected top "
                     f"{len(retrieved_context)} FAISS chunks."
                 ),
+                f"Contextual Retriever prompt plan: {_limit_words(retrieval_plan, 40)}",
                 f"FAISS Context Selector note: {_limit_words(selector_note, 40)}",
             ],
         }
