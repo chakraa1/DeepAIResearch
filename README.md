@@ -122,6 +122,16 @@ full evidence table and next improvements for each concept.
 | 3.5 Parallel File Generation | Parallelization | Medium | Implemented | Contextual Retriever runs parallel Tavily source lanes for papers, news, reports, and APIs before merging sources. | Use LangGraph Send/reducers for graph-native parallel branches. |
 | 3.6 State Checkpointing & Time Travel | Memory Management | Medium | Implemented | DeepResearchWorkflow compiles with MemorySaver and invokes/streams with configurable thread IDs. | Add a UI history browser for replaying checkpointed thread states. |
 
+### Recently implemented next-level improvements
+
+| Concept | Requested improvement | Implementation evidence |
+|---|---|---|
+| 1.2 Tools & Shell Command Execution | Add an explicit safe tool registry for source fetchers or report exporters. | `src/deep_researcher/tools.py` defines `SafeToolRegistry` with allowlisted `parallel_tavily_search`, `faiss_top_k_retrieval`, and `markdown_report_export` tools. |
+| 1.4 Structured Planning | Return a typed Pydantic planning object from the planner agent. | `ResearchPlan` in `src/deep_researcher/models.py` carries `sub_questions`, `focus_areas`, and `evidence_needs`; Query Planning Agent stores it in workflow state. |
+| 2.2 AI Code Review with Retry Limit | Add a reflection node with retry counters for report validation failures. | `Report Reflection Agent` validates report rules after Report Builder and uses `REPORT_REFLECTION_RETRY_LIMIT` for retry control. |
+| 3.4 Human Approval Gate | Add a review gate before Report Builder using LangGraph interrupts. | `Human Review Gate` runs before Report Builder and calls LangGraph `interrupt` when `REQUIRE_HUMAN_REVIEW=true`; it auto-approves by default for demos. |
+| 3.6 State Checkpointing & Time Travel | Add MemorySaver checkpointer and thread IDs for replayable research runs. | `DeepResearchWorkflow` compiles with `MemorySaver` and runs with configurable `CHECKPOINT_THREAD_ID`. |
+
 ## Quick start
 
 ```bash
