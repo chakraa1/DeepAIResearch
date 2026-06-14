@@ -79,15 +79,15 @@ Return one sub-question per line."""
             retrieved_context = all_sources[: self.config.max_retrieval_docs]
         retrieved_context = retrieved_context[: self.config.max_retrieval_docs]
 
+        selector_prompt = render_system_prompt(
+            "source_selector",
+            query=query,
+            top_k=self.config.max_retrieval_docs,
+            retrieved_context=_format_sources(retrieved_context, max_chars=3_000),
+        )
         selector_note = self.llm.generate(
-            get_system_prompt("source_selector"),
-            f"""Research question: {query}
-
-FAISS top-k limit: {self.config.max_retrieval_docs}
-Selected results:
-{_format_sources(retrieved_context, max_chars=3_000)}
-
-Confirm in one short paragraph why these results should be passed to the LLM agents.""",
+            selector_prompt,
+            "Confirm in one short paragraph why these retrieved_context sources should be passed to the LLM agents.",
         )
 
         return {

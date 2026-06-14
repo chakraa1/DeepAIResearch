@@ -61,6 +61,31 @@ def test_contextual_retriever_prompt_renders_query_placeholders() -> None:
     assert "{query}" not in prompt
 
 
+def test_source_selector_prompt_renders_retrieved_context_sources() -> None:
+    retrieved_context = """
+[1] Agent Adoption Report
+URL: https://example.com/report
+Type: reports
+Content: Evaluation quality is a recurring adoption bottleneck.
+""".strip()
+
+    prompt = render_system_prompt(
+        "source_selector",
+        query="enterprise AI agent adoption",
+        top_k=3,
+        retrieved_context=retrieved_context,
+    )
+
+    assert "Role: FAISS Context Selector" in prompt
+    assert "Research question: enterprise AI agent adoption" in prompt
+    assert "FAISS top-k limit: 3" in prompt
+    assert "Retrieved context with sources:" in prompt
+    assert "Agent Adoption Report" in prompt
+    assert "https://example.com/report" in prompt
+    assert "Evaluation quality is a recurring adoption bottleneck." in prompt
+    assert "{retrieved_context}" not in prompt
+
+
 def test_offline_workflow_generates_report_from_local_sources() -> None:
     pytest.importorskip("faiss")
     pytest.importorskip("langgraph")
