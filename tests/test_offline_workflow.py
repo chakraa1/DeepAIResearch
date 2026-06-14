@@ -73,6 +73,18 @@ def test_openrouter_env_sets_base_url_and_model(monkeypatch: pytest.MonkeyPatch)
     assert not config.uses_direct_openai_api
 
 
+def test_default_config_uses_openrouter_base_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("LLM_PROVIDER", raising=False)
+    monkeypatch.delenv("OPENAI_BASE_URL", raising=False)
+    monkeypatch.delenv("OPENAI_MODEL", raising=False)
+
+    config = ResearchConfig.from_env()
+
+    assert config.llm_provider == "openrouter"
+    assert config.llm_base_url == OPENROUTER_BASE_URL
+    assert config.openai_model == "openai/gpt-4o-mini"
+
+
 def test_openrouter_uses_local_hash_embeddings() -> None:
     config = ResearchConfig(
         openai_api_key="sk-or-v1-test",

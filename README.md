@@ -144,11 +144,11 @@ cp src/deep_researcher/config/.env.example .env
 Edit `.env` and add keys if available:
 
 ```bash
-OPENAI_API_KEY=your_openai_key
+OPENAI_API_KEY=your_openrouter_key
 TAVILY_API_KEY=your_tavily_key
-LLM_PROVIDER=openai
-OPENAI_BASE_URL=
-OPENAI_MODEL=gpt-4o-mini
+LLM_PROVIDER=openrouter
+OPENAI_BASE_URL=https://openrouter.ai/api/v1
+OPENAI_MODEL=openai/gpt-4o-mini
 MAX_WEB_RESULTS=8
 MAX_RETRIEVAL_DOCS=3
 VALIDATOR_TOP_K=3
@@ -162,13 +162,13 @@ REQUIRE_HUMAN_REVIEW=false
 CHECKPOINT_THREAD_ID=deep-research-default
 ```
 
-For OpenRouter, use an OpenRouter key and these settings:
+OpenRouter is the default provider. To switch to direct OpenAI, use:
 
 ```bash
-OPENAI_API_KEY=your_openrouter_key
-LLM_PROVIDER=openrouter
-OPENAI_BASE_URL=https://openrouter.ai/api/v1
-OPENAI_MODEL=openai/gpt-4o-mini
+OPENAI_API_KEY=your_openai_key
+LLM_PROVIDER=openai
+OPENAI_BASE_URL=
+OPENAI_MODEL=gpt-4o-mini
 ```
 
 Run the app:

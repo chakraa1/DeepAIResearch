@@ -16,9 +16,9 @@ class ResearchConfig:
 
     openai_api_key: str | None = None
     tavily_api_key: str | None = None
-    llm_provider: str = "openai"
-    openai_base_url: str | None = None
-    openai_model: str = "gpt-4o-mini"
+    llm_provider: str = "openrouter"
+    openai_base_url: str | None = OPENROUTER_BASE_URL
+    openai_model: str = "openai/gpt-4o-mini"
     max_web_results: int = 8
     max_retrieval_docs: int = 3
     validator_top_k: int = 3
@@ -38,7 +38,7 @@ class ResearchConfig:
         """Load settings from environment variables and a local .env file."""
 
         load_dotenv()
-        provider = _normalize_provider(os.getenv("LLM_PROVIDER", "openai"))
+        provider = _normalize_provider(os.getenv("LLM_PROVIDER", "openrouter"))
         base_url = _resolve_base_url(provider, os.getenv("OPENAI_BASE_URL") or None)
         return cls(
             openai_api_key=os.getenv("OPENAI_API_KEY") or None,
