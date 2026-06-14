@@ -77,14 +77,18 @@ flowchart TD
 
 ## Tech stack
 
-- Python
-- Streamlit UI
-- LangGraph for orchestration
-- LangChain document, model, and vector interfaces
-- FAISS vector database
-- Tavily web search
-- OpenAI chat and embedding models when configured
-- YAML system prompts loaded with process-level caching
+| Layer | Technology | Purpose |
+|---|---|---|
+| Language | Python | Core application, agents, retrieval, and Streamlit runtime. |
+| UI | Streamlit | Interactive research UI, configuration controls, logs, report download, and snippet export. |
+| Agent orchestration | LangGraph | Stateful multi-agent workflow, node streaming, review gate, reflection, and checkpointing. |
+| LLM framework | LangChain | Chat model integration, document abstractions, text splitting, and OpenAI-compatible provider support. |
+| LLM providers | OpenRouter / OpenAI-compatible APIs | Report synthesis, analysis, insight generation, source validation, and prompt-driven agent reasoning. |
+| Vector database | FAISS | Top-k semantic retrieval over uploaded files and Tavily web results. |
+| Embeddings | OpenAI embeddings / local hash embeddings | Direct OpenAI embeddings when available, deterministic local fallback for OpenRouter and offline demos. |
+| Web search | Tavily | Parallel source-lane web search across papers, news, reports, APIs, and datasets. |
+| Prompt management | YAML + cached loader | Centralized system prompts with explicit roles and runtime placeholders. |
+| Deployment | Streamlit Community Cloud / Hugging Face Spaces | Free Streamlit-capable hosting through the root `app.py` entrypoint. |
 
 ## Hackathon concept alignment
 
