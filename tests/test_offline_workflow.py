@@ -26,14 +26,15 @@ def test_concepts_json_loads_and_scores_alignment() -> None:
     score = score_concept_coverage()
     rows = coverage_table_rows()
 
-    assert len(concepts) == 18
+    assert len(concepts) == 17
     assert score.chapter == "Orion Tutorial - Consolidated Agent Curriculum and Design Patterns"
     assert score.max_score == 10
     assert 0 < score.score <= 10
     assert score.implemented_count >= 10
     assert score.partial_count >= 5
-    assert len(rows) == 18
+    assert len(rows) == 17
     assert any(row["Concept"] == "1.3 Agent Graph & Smart Routing" for row in rows)
+    assert not any(row["Concept"] == "1.5 Code Generation" for row in rows)
 
 
 def test_openrouter_env_sets_base_url_and_model(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -84,6 +85,13 @@ def test_cached_yaml_prompt_includes_explicit_role() -> None:
 
     assert "Role: Report Builder Agent" in prompt
     assert "SOURCE_LINKS" in prompt
+
+
+def test_reproducible_snippet_prompt_requires_python_code() -> None:
+    prompt = get_system_prompt("reproducible_snippet")
+
+    assert "Role: Reproducible Snippet Agent" in prompt
+    assert "fenced python code block" in prompt
 
 
 def test_contextual_retriever_prompt_renders_query_placeholders() -> None:
@@ -181,6 +189,9 @@ def test_offline_workflow_generates_report_from_local_sources() -> None:
     assert len(result["retrieved_context"]) <= 3
     assert result["retrieved_context"]
     assert result["relevant_context_summary"]
+    assert result["reproducible_snippet"].startswith("```python")
+    assert "sources =" in result["reproducible_snippet"]
     assert any("Contextual Retriever prompt plan:" in log for log in result["logs"])
     assert any("Tuning to Relevant Context completed:" in log for log in result["logs"])
+    assert any("Reproducible Snippet Agent completed:" in log for log in result["logs"])
     assert result["logs"][-1] == "Report Builder Agent completed: compiled the final rules-checked report."

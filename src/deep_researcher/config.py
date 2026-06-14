@@ -26,6 +26,7 @@ class ResearchConfig:
     insight_word_limit: int = 200
     report_min_words: int = 200
     report_max_words: int = 300
+    generate_code_snippet: bool = True
     chunk_size: int = 1_000
     chunk_overlap: int = 150
 
@@ -49,6 +50,7 @@ class ResearchConfig:
             insight_word_limit=_read_int("INSIGHT_WORD_LIMIT", 200),
             report_min_words=_read_int("REPORT_MIN_WORDS", 200),
             report_max_words=_read_int("REPORT_MAX_WORDS", 300),
+            generate_code_snippet=_read_bool("GENERATE_CODE_SNIPPET", True),
         )
 
     @property
@@ -79,6 +81,13 @@ def _read_int(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _read_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 
 def _normalize_provider(provider: str | None) -> str:

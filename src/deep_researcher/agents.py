@@ -235,6 +235,45 @@ Hypotheses:
             ],
         }
 
+    def generate_reproducible_snippet(self, state: ResearchState) -> ResearchState:
+        """Reproducible Snippet Agent: creates optional notebook-ready code."""
+
+        logs = _with_logs(
+            state,
+            "Reproducible Snippet Agent started: preparing notebook-ready Python from retrieved sources.",
+        )
+        if not self.config.generate_code_snippet:
+            return {
+                **state,
+                "reproducible_snippet": "",
+                "logs": [*logs, "Reproducible Snippet Agent skipped: disabled in configuration."],
+            }
+
+        sources = state.get("retrieved_context", [])[: self.config.max_retrieval_docs]
+        source_table = _format_source_records_for_code(sources)
+        snippet = self.llm.generate(
+            get_system_prompt("reproducible_snippet"),
+            f"""Research question: {state['query']}
+
+Critical synthesis:
+{state.get('synthesis', '')}
+
+Insights:
+{chr(10).join(f'- {item}' for item in state.get('insights', []))}
+
+Source records:
+{source_table}
+
+Create a Python snippet that stores these source records, prints source counts by type,
+and prints a compact evidence checklist for reproducing the report reasoning.""",
+        )
+        snippet = _ensure_python_code_block(snippet, sources, state["query"])
+        return {
+            **state,
+            "reproducible_snippet": snippet,
+            "logs": [*logs, "Reproducible Snippet Agent completed: generated notebook-ready Python."],
+        }
+
     def build_report(self, state: ResearchState) -> ResearchState:
         """Report Builder Agent: compiles the final structured report."""
 
@@ -317,6 +356,51 @@ def _format_source_inventory(sources: list[SourceDocument], *, max_items: int = 
             f"[{index}] {source.title} | type={source.source_type} | url={source.url or 'local/uploaded'}"
         )
     return f"Source counts: {count_lines}\n" + "\n".join(source_lines)
+
+
+def _format_source_records_for_code(sources: list[SourceDocument]) -> str:
+    if not sources:
+        return "[]"
+    rows = []
+    for source in sources:
+        rows.append(
+            {
+                "title": source.title,
+                "url": source.url or "",
+                "source_type": source.source_type,
+                "content_preview": _limit_words(source.content.replace("\n", " "), 40),
+            }
+        )
+    return repr(rows)
+
+
+def _ensure_python_code_block(
+    snippet: str,
+    sources: list[SourceDocument],
+    query: str,
+) -> str:
+    if "```python" in snippet and "```" in snippet.replace("```python", "", 1):
+        return snippet.strip()
+
+    source_records = _format_source_records_for_code(sources)
+    fallback = f'''```python
+from collections import Counter
+
+research_question = {query!r}
+sources = {source_records}
+
+print("Research question:", research_question)
+print("Source count:", len(sources))
+print("Sources by type:", dict(Counter(source["source_type"] for source in sources)))
+
+print("\\nEvidence checklist:")
+for index, source in enumerate(sources, start=1):
+    title = source["title"]
+    source_type = source["source_type"]
+    preview = source["content_preview"]
+    print(f"{{index}}. [{{source_type}}] {{title}}: {{preview}}")
+```'''
+    return fallback
 
 
 def _with_logs(state: ResearchState, message: str) -> list[str]:

@@ -65,11 +65,6 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
         "Query Planning Agent creates sub-questions before retrieval, but it does not use with_structured_output yet.",
         "Return a typed Pydantic planning object from the planner agent.",
     ),
-    "1_5_code_generation": (
-        "not_targeted",
-        "The product generates research reports, not executable code artifacts.",
-        "Add an optional code/notebook generation agent for reproducible research snippets.",
-    ),
     "1_6_system_prompt": (
         "implemented",
         "System prompts are centralized in system_prompts.yaml with explicit roles and runtime placeholders.",

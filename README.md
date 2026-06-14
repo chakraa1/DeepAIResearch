@@ -12,6 +12,7 @@ research report in Streamlit.
 - **Retrieval augmented synthesis** using FAISS and LangChain document utilities.
 - **Critical analysis** that flags source credibility, caveats, and contradictions.
 - **Insight generation** for hypotheses, trends, and follow-up questions.
+- **Reproducible Python snippets** for source counts and evidence checklists.
 - **Report building** into a citation-oriented Markdown research report.
 - **Cached YAML system prompts** with explicit agent roles.
 - **Offline demo fallback** when API keys are unavailable.
@@ -29,7 +30,9 @@ research report in Streamlit.
    quality with a configurable 200-word default limit.
 5. **Insight Generation Agent** proposes hypotheses and trends with a
    configurable 200-word default limit.
-6. **Report Builder Agent** compiles a 200-300 word Markdown report and enforces
+6. **Reproducible Snippet Agent** creates optional notebook-ready Python for
+   source counts and evidence checklist reproduction.
+7. **Report Builder Agent** compiles a 200-300 word Markdown report and enforces
    human-tone, hook, source-link, and formatting rules.
 
 ## Simple flow diagram
@@ -55,9 +58,10 @@ flowchart TD
     I --> J[Source Validator Agent]
     J --> K[Critical Analysis Agent]
     K --> L[Insight Generation Agent]
-    L --> M[Report Builder Agent]
-    M --> N[Rules-checked Markdown report]
-    N --> O[View or download in Streamlit]
+    L --> M[Reproducible Snippet Agent]
+    M --> N[Report Builder Agent]
+    N --> O[Rules-checked Markdown report]
+    O --> P[View or download in Streamlit]
 ```
 
 ## Tech stack
@@ -79,10 +83,10 @@ The app loads it at runtime and maps each concept to implementation evidence in
 
 Current computed concept alignment:
 
-- **Concept Score:** 7.2/10
-- **Implemented concepts:** 10/18
-- **Partial concepts:** 6/18
-- **Not targeted concepts:** 2/18
+- **Concept Score:** 7.6/10
+- **Implemented concepts:** 10/17
+- **Partial concepts:** 6/17
+- **Not targeted concepts:** 1/17
 
 Open the Streamlit sidebar section **Hackathon concept alignment** to view the
 full evidence table and next improvements for each concept.
@@ -93,7 +97,6 @@ full evidence table and next improvements for each concept.
 | 1.2 Tools & Shell Command Execution | Tool Use | High | Partial | The app uses Tavily, FAISS, PDF parsing, and file upload capabilities, but agents do not call shell subprocess tools. | Add an explicit safe tool registry for source fetchers or report exporters. |
 | 1.3 Agent Graph & Smart Routing | Routing | Critical | Implemented | DeepResearchWorkflow builds a LangGraph node network for planner, retriever, validator, analysis, insights, and report builder. | Add conditional edges for retry or skip behavior based on state quality. |
 | 1.4 Structured Planning | Planning | High | Partial | Query Planning Agent creates sub-questions before retrieval, but it does not use with_structured_output yet. | Return a typed Pydantic planning object from the planner agent. |
-| 1.5 Code Generation | Code Generation | High | Not Targeted | The product generates research reports, not executable code artifacts. | Add an optional code/notebook generation agent for reproducible research snippets. |
 | 1.6 System Prompt | Persona & Constraint Management | High | Implemented | System prompts are centralized in system_prompts.yaml with explicit roles and runtime placeholders. | Add prompt version metadata and per-agent prompt tests. |
 | 1.7 Streaming | UX Event Streaming | Medium | Implemented | DeepResearchWorkflow.stream emits graph node updates that Streamlit renders step by step. | Add token-level streaming when provider APIs support it. |
 | 1.8 Multi Turn Conversation | Session Memory | Medium | Partial | Streamlit session_state stores the last report and state for a session, but durable conversation memory is not implemented. | Persist research sessions and allow follow-up questions over prior state. |
@@ -132,6 +135,7 @@ CRITICAL_ANALYSIS_WORD_LIMIT=200
 INSIGHT_WORD_LIMIT=200
 REPORT_MIN_WORDS=200
 REPORT_MAX_WORDS=300
+GENERATE_CODE_SNIPPET=true
 ```
 
 For OpenRouter, use an OpenRouter key and these settings:

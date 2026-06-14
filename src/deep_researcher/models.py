@@ -48,6 +48,7 @@ class ResearchState(TypedDict, total=False):
     contradictions: list[str]
     insights: list[str]
     hypotheses: list[str]
+    reproducible_snippet: str
     report: str
     logs: list[str]
     errors: list[str]

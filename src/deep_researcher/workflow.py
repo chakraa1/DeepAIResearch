@@ -27,6 +27,7 @@ class DeepResearchWorkflow:
         graph.add_node("source_validator", self.agents.assess_sources)
         graph.add_node("critical_analysis", self.agents.analyze_findings)
         graph.add_node("insight_generation", self.agents.generate_insights)
+        graph.add_node("reproducible_snippet", self.agents.generate_reproducible_snippet)
         graph.add_node("report_builder", self.agents.build_report)
 
         graph.set_entry_point("query_planner")
@@ -34,7 +35,8 @@ class DeepResearchWorkflow:
         graph.add_edge("contextual_retriever", "source_validator")
         graph.add_edge("source_validator", "critical_analysis")
         graph.add_edge("critical_analysis", "insight_generation")
-        graph.add_edge("insight_generation", "report_builder")
+        graph.add_edge("insight_generation", "reproducible_snippet")
+        graph.add_edge("reproducible_snippet", "report_builder")
         graph.add_edge("report_builder", END)
         return graph.compile()
 

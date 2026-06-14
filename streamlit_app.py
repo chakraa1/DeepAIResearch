@@ -25,6 +25,7 @@ AGENT_LABELS = {
     "source_validator": "Source Validator Agent",
     "critical_analysis": "Critical Analysis Agent",
     "insight_generation": "Insight Generation Agent",
+    "reproducible_snippet": "Reproducible Snippet Agent",
     "report_builder": "Report Builder Agent",
 }
 
@@ -135,6 +136,11 @@ def load_config_from_ui() -> ResearchConfig:
         report_min_words = st.slider("Report minimum words", 100, 300, _clamp(config.report_min_words, 100, 300))
         report_max_words = st.slider("Report maximum words", 200, 400, _clamp(config.report_max_words, 200, 400))
         report_max_words = max(report_max_words, report_min_words)
+        generate_code_snippet = st.checkbox(
+            "Generate reproducible Python snippet",
+            value=config.generate_code_snippet,
+            help="Adds a notebook-ready snippet that reproduces source counts and evidence checklist.",
+        )
 
     if openai_key:
         os.environ["OPENAI_API_KEY"] = openai_key
@@ -159,6 +165,7 @@ def load_config_from_ui() -> ResearchConfig:
         insight_word_limit=insight_limit,
         report_min_words=report_min_words,
         report_max_words=report_max_words,
+        generate_code_snippet=generate_code_snippet,
     )
 
 
@@ -173,7 +180,8 @@ def render_sidebar(config: ResearchConfig) -> None:
             3. Source Validator Agent
             4. Critical Analysis Agent
             5. Insight Generation Agent
-            6. Report Builder Agent
+            6. Reproducible Snippet Agent
+            7. Report Builder Agent
             """
         )
         st.subheader("Runtime Status")
@@ -253,6 +261,17 @@ def render_results(state: dict) -> None:
         for log in state.get("logs", []):
             st.write(log)
 
+    snippet = state.get("reproducible_snippet", "")
+    if snippet:
+        with st.expander("Reproducible Python snippet", expanded=False):
+            st.markdown(snippet)
+            st.download_button(
+                "Download Python snippet",
+                data=_strip_python_fence(snippet),
+                file_name="reproducible_research_snippet.py",
+                mime="text/x-python",
+            )
+
     with st.expander("Retrieved sources", expanded=False):
         sources = state.get("retrieved_context", [])
         if not sources:
@@ -319,6 +338,15 @@ def _provider_value(label: str) -> str:
     if label == "Custom OpenAI-compatible":
         return "custom"
     return "openai"
+
+
+def _strip_python_fence(snippet: str) -> str:
+    stripped = snippet.strip()
+    if stripped.startswith("```python"):
+        stripped = stripped.removeprefix("```python").strip()
+    if stripped.endswith("```"):
+        stripped = stripped[: -3].strip()
+    return stripped + "\n"
 
 
 if __name__ == "__main__":
