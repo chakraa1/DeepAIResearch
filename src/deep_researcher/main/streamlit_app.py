@@ -1,4 +1,4 @@
-"""Streamlit UI for the Multi-Agent AI Deep Researcher."""
+"""Streamlit UI for CyberSecurityAIAgent."""
 
 from __future__ import annotations
 
@@ -17,18 +17,20 @@ if str(SRC) not in sys.path:
 from deep_researcher import DeepResearchWorkflow, ResearchConfig
 from deep_researcher.config import OPENROUTER_BASE_URL
 from deep_researcher.config.concepts import coverage_table_rows, score_concept_coverage
+from deep_researcher.main.evaluation import run_offline_evaluation
 from deep_researcher.main.models import SourceDocument
 
 
 AGENT_LABELS = {
-    "query_planner": "Query Planning Agent",
-    "contextual_retriever": "Contextual Retriever Agent",
-    "source_validator": "Source Validator Agent",
-    "critical_analysis": "Critical Analysis Agent",
-    "insight_generation": "Insight Generation Agent",
-    "reproducible_snippet": "Reproducible Snippet Agent",
+    "security_planner": "Security Planning Agent",
+    "log_monitor": "Log Monitor Agent",
+    "threat_intelligence": "Threat Intelligence Agent",
+    "vulnerability_scanner": "Vulnerability Scanner Agent",
+    "incident_response": "Incident Response Agent",
+    "policy_checker": "Policy Checker Agent",
+    "evaluation_loop": "Evaluation Loop Agent",
     "human_review_gate": "Human Review Gate",
-    "report_builder": "Report Builder Agent",
+    "security_report_builder": "Security Report Builder Agent",
     "report_reflection": "Report Reflection Agent",
     "report_revision": "Report Revision Agent",
 }
@@ -36,14 +38,14 @@ AGENT_LABELS = {
 
 def main() -> None:
     st.set_page_config(
-        page_title="Multi-Agent AI Deep Researcher",
-        page_icon="🔎",
+        page_title="CyberSecurityAIAgent",
+        page_icon="🛡️",
         layout="wide",
     )
 
-    st.title("🔎 Multi-Agent AI Deep Researcher")
+    st.title("🛡️ CyberSecurityAIAgent")
     st.caption(
-        "LangGraph-orchestrated agents for multi-hop, multi-source investigations with Tavily search and FAISS retrieval."
+        "A LangGraph multi-agent cybersecurity system for logs, CVEs, vulnerability scanning, incident response, policy checks, and evaluation."
     )
 
     try:
@@ -54,31 +56,36 @@ def main() -> None:
     render_sidebar(config)
 
     query = st.text_area(
-        "Research question",
-        placeholder="Example: What are the latest safety and adoption trends for AI agents in healthcare?",
+        "Security assessment request",
+        placeholder="Example: Assess suspicious login failures, Docker hardening, and Log4j exposure for an internet banking platform.",
         height=110,
     )
     uploaded_files = st.file_uploader(
-        "Optional local sources",
-        type=["txt", "md", "pdf"],
+        "Optional evidence files",
+        type=["txt", "md", "pdf", "log", "py", "js", "java", "json", "yaml", "yml", "conf", "ini", "sql", "toml"],
         accept_multiple_files=True,
-        help="Upload reports, papers, notes, or PDFs to include in the FAISS retrieval corpus.",
+        help="Upload logs, source snippets, Docker/database/API configs, SBOMs, reports, or policy documents.",
     )
 
-    col_a, col_b = st.columns([1, 3])
+    col_a, col_b, col_c = st.columns([1, 1, 3])
     with col_a:
-        run_clicked = st.button("Run deep research", type="primary", use_container_width=True)
+        run_clicked = st.button("Run security assessment", type="primary", use_container_width=True)
     with col_b:
+        eval_clicked = st.button("Run offline eval suite", use_container_width=True)
+    with col_c:
         st.info(
-            "For best results set `OPENAI_API_KEY` and `TAVILY_API_KEY`. Without keys, the app runs in local demo mode using uploaded files and extractive synthesis.",
+            "For best CVE intelligence set `TAVILY_API_KEY` and an LLM key. Without keys, the app runs with local heuristics, FAISS, and authorized-source guidance.",
             icon="ℹ️",
         )
+    if eval_clicked:
+        run_evaluation_suite(config)
+        return
 
     if run_clicked:
         if not query.strip():
-            st.warning("Enter a research question first.")
+            st.warning("Enter a security assessment request first.")
             return
-        run_research(query.strip(), uploaded_files, config)
+        run_security_assessment(query.strip(), uploaded_files, config)
         return
 
     if "last_report" in st.session_state:
@@ -127,22 +134,22 @@ def load_config_from_ui() -> ResearchConfig:
             "Tavily API key",
             value=tavily_key or "",
             type="password",
-            help="Optional. Used by the Contextual Retriever Agent for web search.",
+            help="Optional. Used by the Threat Intelligence Agent for authorized web search lanes.",
         )
         model = st.text_input("LLM model", value=model)
-        max_web_results = st.slider("Max web results per investigation", 4, 16, _clamp(_config_value(config, "max_web_results", 8), 4, 16))
+        max_web_results = st.slider("Max web results per assessment", 4, 18, _clamp(_config_value(config, "max_web_results", 8), 4, 18))
         max_retrieval_docs = st.slider(
-            "FAISS top-k chunks sent to LLM agents",
+            "FAISS top-k chunks sent to security agents",
             1,
             10,
             _clamp(_config_value(config, "max_retrieval_docs", 3), 1, 10),
             help="Defaults to 3 to control token usage between retrieval and LLM agents.",
         )
         validator_top_k = st.slider("Source validator top-k", 1, 10, _clamp(_config_value(config, "validator_top_k", 3), 1, 10))
-        critical_limit = st.slider("Critical analysis word limit", 80, 300, _clamp(_config_value(config, "critical_analysis_word_limit", 200), 80, 300))
-        insight_limit = st.slider("Insight generation word limit", 80, 300, _clamp(_config_value(config, "insight_word_limit", 200), 80, 300))
-        report_min_words = st.slider("Report minimum words", 100, 300, _clamp(_config_value(config, "report_min_words", 200), 100, 300))
-        report_max_words = st.slider("Report maximum words", 200, 400, _clamp(_config_value(config, "report_max_words", 300), 200, 400))
+        critical_limit = st.slider("Threat summary word limit", 80, 300, _clamp(_config_value(config, "critical_analysis_word_limit", 200), 80, 300))
+        insight_limit = st.slider("Evaluation note word limit", 80, 300, _clamp(_config_value(config, "insight_word_limit", 200), 80, 300))
+        report_min_words = st.slider("Report minimum words", 100, 450, _clamp(_config_value(config, "report_min_words", 200), 100, 450))
+        report_max_words = st.slider("Report maximum words", 260, 900, _clamp(_config_value(config, "report_max_words", 650), 260, 900))
         report_max_words = max(report_max_words, report_min_words)
         reflection_retry_limit = st.slider(
             "Report reflection retry limit",
@@ -151,9 +158,9 @@ def load_config_from_ui() -> ResearchConfig:
             _clamp(_config_value(config, "report_reflection_retry_limit", 2), 0, 5),
         )
         generate_code_snippet = st.checkbox(
-            "Generate reproducible Python snippet",
+            "Generate reproducible evaluation snippet",
             value=_config_value(config, "generate_code_snippet", True),
-            help="Adds a notebook-ready snippet that reproduces source counts and evidence checklist.",
+            help="Adds a notebook-ready snippet that reproduces finding counts and evaluation metrics.",
         )
         require_human_review = st.checkbox(
             "Require human review gate",
@@ -162,7 +169,7 @@ def load_config_from_ui() -> ResearchConfig:
         )
         checkpoint_thread_id = st.text_input(
             "Checkpoint thread ID",
-            value=_config_value(config, "checkpoint_thread_id", "deep-research-default"),
+            value=_config_value(config, "checkpoint_thread_id", "cybersecurity-agent-default"),
             help="MemorySaver thread ID for replayable workflow checkpoints.",
         )
 
@@ -193,7 +200,7 @@ def load_config_from_ui() -> ResearchConfig:
             "generate_code_snippet": generate_code_snippet,
             "report_reflection_retry_limit": reflection_retry_limit,
             "require_human_review": require_human_review,
-            "checkpoint_thread_id": checkpoint_thread_id or "deep-research-default",
+            "checkpoint_thread_id": checkpoint_thread_id or "cybersecurity-agent-default",
         }
     )
 
@@ -204,26 +211,27 @@ def render_sidebar(config: ResearchConfig) -> None:
         st.subheader("Agent System")
         st.markdown(
             """
-            1. Query Planning Agent
-            2. Contextual Retriever Agent
-            3. Source Validator Agent
-            4. Critical Analysis Agent
-            5. Insight Generation Agent
-            6. Reproducible Snippet Agent
-            7. Human Review Gate
-            8. Report Builder Agent
-            9. Report Reflection Agent
-            10. Report Revision Agent
+            1. Security Planning Agent
+            2. Log Monitor Agent
+            3. Threat Intelligence Agent
+            4. Vulnerability Scanner Agent
+            5. Incident Response Agent
+            6. Policy Checker Agent
+            7. Evaluation Loop Agent
+            8. Human Review Gate
+            9. Security Report Builder Agent
+            10. Report Reflection Agent
+            11. Report Revision Agent
             """
         )
         st.subheader("Runtime Status")
         st.write("LLM:", "enabled" if _config_value(config, "llm_enabled", False) else "local fallback")
         st.write("Provider:", _provider_label(_config_value(config, "llm_provider", "openai")))
         st.write("Base URL:", _config_value(config, "llm_base_url", None) or "OpenAI default")
-        st.write("Web search:", "enabled" if _config_value(config, "web_search_enabled", False) else "local/upload-only")
+        st.write("Threat web search:", "enabled" if _config_value(config, "web_search_enabled", False) else "local/upload-only")
         st.write("FAISS top-k:", _config_value(config, "max_retrieval_docs", 3))
         st.write("Validator top-k:", _config_value(config, "validator_top_k", 3))
-        st.write("Report words:", f"{_config_value(config, 'report_min_words', 200)}-{_config_value(config, 'report_max_words', 300)}")
+        st.write("Report words:", f"{_config_value(config, 'report_min_words', 200)}-{_config_value(config, 'report_max_words', 650)}")
         st.write("Reflection retries:", _config_value(config, "report_reflection_retry_limit", 2))
         st.write("Checkpoint thread:", _config_value(config, "checkpoint_thread_id", "deep-research-default"))
         render_concept_alignment()
@@ -244,7 +252,7 @@ def render_concept_alignment() -> None:
         )
 
 
-def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
+def run_security_assessment(query: str, uploaded_files, config: ResearchConfig) -> None:
     local_documents = load_uploaded_documents(uploaded_files or [])
     try:
         workflow = DeepResearchWorkflow(config)
@@ -260,7 +268,7 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
     shown_logs = 0
 
     try:
-        with st.spinner("Agents are collaborating on the investigation..."):
+        with st.spinner("Cybersecurity agents are collaborating on the assessment..."):
             for index, (node_name, state) in enumerate(
                 workflow.stream(query, local_documents=local_documents),
                 start=1,
@@ -280,7 +288,7 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
         return
     except Exception:
         st.error(
-            "The research run could not finish. Please check your API keys, refresh the app, and try again."
+            "The security assessment could not finish. Please check your API keys, refresh the app, and try again."
         )
         return
 
@@ -293,16 +301,41 @@ def run_research(query: str, uploaded_files, config: ResearchConfig) -> None:
     render_results(final_state)
 
 
+def run_evaluation_suite(config: ResearchConfig) -> None:
+    st.header("Offline Evaluation Suite")
+    with st.spinner("Running deterministic security eval cases through the full workflow..."):
+        try:
+            rows = run_offline_evaluation(
+                ResearchConfig(
+                    openai_api_key=None,
+                    tavily_api_key=None,
+                    max_web_results=_config_value(config, "max_web_results", 8),
+                    max_retrieval_docs=_config_value(config, "max_retrieval_docs", 3),
+                    validator_top_k=_config_value(config, "validator_top_k", 3),
+                    report_reflection_retry_limit=_config_value(config, "report_reflection_retry_limit", 2),
+                    checkpoint_thread_id="cybersecurity-agent-eval-ui",
+                )
+            )
+        except Exception as exc:
+            st.error(f"Evaluation suite failed: {exc}")
+            return
+    st.dataframe(rows, hide_index=True, use_container_width=True)
+    passed = sum(1 for row in rows if row["passed"])
+    st.metric("Eval pass rate", f"{passed}/{len(rows)}")
+
+
 def render_results(state: dict) -> None:
-    st.header("Research Report")
+    st.header("Security Assessment Report")
     report = state.get("report") or "No report generated."
     st.markdown(report)
     st.download_button(
-        "Download Markdown report",
+        "Download security report",
         data=report,
-        file_name="deep_research_report.md",
+        file_name="cybersecurity_ai_agent_report.md",
         mime="text/markdown",
     )
+
+    render_finding_dashboard(state)
 
     with st.expander("Agent trace", expanded=False):
         for log in state.get("logs", []):
@@ -323,16 +356,16 @@ def render_results(state: dict) -> None:
 
     snippet = state.get("reproducible_snippet", "")
     if snippet:
-        with st.expander("Reproducible Python snippet", expanded=False):
+        with st.expander("Reproducible evaluation snippet", expanded=False):
             st.markdown(snippet)
             st.download_button(
-                "Download Python snippet",
+                "Download evaluation snippet",
                 data=_strip_python_fence(snippet),
-                file_name="reproducible_research_snippet.py",
+                file_name="cybersecurity_eval_snippet.py",
                 mime="text/x-python",
             )
 
-    with st.expander("Retrieved sources", expanded=False):
+    with st.expander("Retrieved threat and policy sources", expanded=False):
         sources = state.get("retrieved_context", [])
         if not sources:
             st.write("No sources were retrieved.")
@@ -341,6 +374,76 @@ def render_results(state: dict) -> None:
             if source.url:
                 st.caption(source.url)
             st.write(source.content[:900] + ("..." if len(source.content) > 900 else ""))
+
+
+def render_finding_dashboard(state: dict) -> None:
+    findings = state.get("findings", [])
+    evaluation = state.get("evaluation_summary")
+    risk_score = state.get("risk_score", 0)
+
+    metric_cols = st.columns(4)
+    metric_cols[0].metric("Risk score", f"{risk_score:.0f}/100")
+    metric_cols[1].metric("Findings", len(findings))
+    metric_cols[2].metric("Policy checks", len(state.get("policy_gaps", [])))
+    metric_cols[3].metric("Eval score", f"{evaluation.overall_score:.2f}" if evaluation else "n/a")
+
+    if findings:
+        rows = [
+            {
+                "Severity": finding.severity.upper(),
+                "Agent": finding.agent,
+                "Category": finding.category,
+                "Title": finding.title,
+                "Assets": ", ".join(finding.affected_assets),
+                "Fix": finding.recommended_fix,
+            }
+            for finding in findings
+        ]
+        with st.expander("Structured findings", expanded=True):
+            st.dataframe(rows, hide_index=True, use_container_width=True)
+
+    policy_gaps = state.get("policy_gaps", [])
+    if policy_gaps:
+        with st.expander("Policy checker results", expanded=False):
+            st.dataframe(
+                [
+                    {
+                        "Framework": gap.framework,
+                        "Control": gap.control,
+                        "Status": gap.status,
+                        "Finding": gap.finding,
+                        "Remediation": gap.remediation,
+                    }
+                    for gap in policy_gaps
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+
+    incident_steps = state.get("incident_steps", [])
+    if incident_steps:
+        with st.expander("Incident response steps", expanded=False):
+            for step in incident_steps:
+                st.write(f"**{step.phase.replace('_', ' ').title()}** ({step.owner}, {step.priority}): {step.action}")
+
+    if evaluation:
+        with st.expander("Evaluation loop scorecard", expanded=False):
+            st.dataframe(
+                [
+                    {
+                        "Metric": metric.name,
+                        "Score": metric.score,
+                        "Passed": metric.passed,
+                        "Notes": metric.notes,
+                    }
+                    for metric in evaluation.metrics
+                ],
+                hide_index=True,
+                use_container_width=True,
+            )
+            st.write("Improvement actions:")
+            for action in evaluation.improvement_actions:
+                st.write(f"- {action}")
 
 
 def load_uploaded_documents(uploaded_files) -> list[SourceDocument]:
@@ -357,7 +460,7 @@ def load_uploaded_documents(uploaded_files) -> list[SourceDocument]:
                 SourceDocument(
                     title=uploaded_file.name,
                     content=text,
-                    source_type="uploaded_file",
+                    source_type=_infer_source_type(uploaded_file.name, text),
                     metadata={"filename": uploaded_file.name},
                 )
             )
@@ -370,6 +473,22 @@ def _read_pdf(uploaded_file) -> str:
     reader = PdfReader(uploaded_file)
     pages = [page.extract_text() or "" for page in reader.pages]
     return "\n\n".join(pages)
+
+
+def _infer_source_type(filename: str, text: str) -> str:
+    name = filename.lower()
+    lowered = text[:2_000].lower()
+    if name.endswith(".log") or any(marker in lowered for marker in ("failed password", "status=401", "union select")):
+        return "log"
+    if name == "dockerfile" or name.endswith("dockerfile") or "from " in lowered:
+        return "dockerfile"
+    if name.endswith((".sql", ".conf", ".ini")) or any(marker in lowered for marker in ("listen_addresses", "mysql_allow_empty_password", "postgres_host_auth_method", "sa_password")):
+        return "database_config"
+    if name.endswith((".py", ".js", ".java", ".go", ".ts")):
+        return "code"
+    if name.endswith((".yaml", ".yml", ".json", ".toml")):
+        return "configuration"
+    return "uploaded_file"
 
 
 def _streamlit_secrets() -> dict[str, str]:
