@@ -1,4 +1,4 @@
-"""Safe allowlisted tools used by agents.
+"""Safe allowlisted tools used by cybersecurity agents.
 
 The registry gives agents executable capabilities without exposing arbitrary
 shell access. Each tool is a named Python callable with a narrow purpose.
@@ -50,26 +50,26 @@ def build_default_tool_registry(config: ResearchConfig) -> SafeToolRegistry:
     registry.register(
         SafeTool(
             name="parallel_tavily_search",
-            description="Run parallel Tavily source-lane searches for the research query.",
+            description="Run parallel Tavily source-lane searches for authorized threat intelligence.",
             handler=lambda query: parallel_tavily_search(query, config),
         )
     )
     registry.register(
         SafeTool(
             name="faiss_top_k_retrieval",
-            description="Retrieve top-k context chunks from the combined source corpus using FAISS.",
+            description="Retrieve top-k security context chunks from the combined evidence corpus using FAISS.",
             handler=lambda query, sources: retrieve_relevant_context(query, sources, config),
         )
     )
     registry.register(
         SafeTool(
             name="markdown_report_export",
-            description="Prepare a Markdown report payload for download or file export.",
+            description="Prepare a Markdown security report payload for download or file export.",
             handler=_markdown_report_export,
         )
     )
     return registry
 
 
-def _markdown_report_export(report: str, filename: str = "deep_research_report.md") -> dict[str, str]:
+def _markdown_report_export(report: str, filename: str = "cybersecurity_ai_agent_report.md") -> dict[str, str]:
     return {"filename": filename, "content": report}

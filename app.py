@@ -1,4 +1,4 @@
-"""Free-hosting entrypoint for the Streamlit app.
+"""Free-hosting entrypoint for CyberSecurityAIAgent.
 
 Streamlit Community Cloud and Hugging Face Spaces commonly look for an app at
 the repository root. The main app implementation lives in the package's

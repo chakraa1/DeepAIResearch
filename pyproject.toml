@@ -3,9 +3,9 @@ requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "deep-ai-research"
+name = "cybersecurity-ai-agent"
 version = "0.1.0"
-description = "Multi-agent AI deep research assistant built with LangGraph, FAISS, Tavily, and Streamlit."
+description = "Multi-agent cybersecurity assistant built with LangGraph, FAISS, Tavily, and Streamlit."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [

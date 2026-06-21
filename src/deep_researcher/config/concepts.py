@@ -47,22 +47,22 @@ class ConceptScore:
 COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
     "1_1_llm_setup": (
         "implemented",
-        "ResearchLLM initializes ChatOpenAI with OpenAI/OpenRouter/custom provider config and temperature.",
-        "Expose more model hyperparameters such as max tokens and top-p.",
+        "ResearchLLM initializes ChatOpenAI with OpenAI/OpenRouter/custom provider config and local fallback for security demos.",
+        "Expose more security-specific model controls such as max tokens, top-p, and redaction policy.",
     ),
     "1_2_tools": (
         "implemented",
-        "SafeToolRegistry allowlists Tavily search, FAISS retrieval, and Markdown export tools for agent execution.",
-        "Add per-tool audit logs and user-visible tool invocation metadata.",
+        "SafeToolRegistry allowlists Tavily threat search, FAISS retrieval, and Markdown export tools for agent execution.",
+        "Add signed per-tool audit logs and user-visible tool invocation metadata.",
     ),
     "1_3_agent_graph": (
         "implemented",
-        "DeepResearchWorkflow builds a LangGraph node network for planner, retriever, validator, analysis, insights, and report builder.",
-        "Add conditional edges for retry or skip behavior based on state quality.",
+        "DeepResearchWorkflow builds a LangGraph node network for planning, log monitoring, threat intelligence, vulnerability scanning, incident response, policy checking, evaluation, and reporting.",
+        "Add conditional routing that escalates critical findings into extra validation steps.",
     ),
     "1_4_structured_planning": (
         "implemented",
-        "Query Planning Agent returns a typed ResearchPlan Pydantic object with sub-questions, focus areas, and evidence needs.",
+        "Security Planning Agent returns a typed ResearchPlan Pydantic object with security questions, focus areas, and evidence needs.",
         "Add provider-native with_structured_output when live LLM providers support it.",
     ),
     "1_6_system_prompt": (
@@ -87,43 +87,43 @@ COVERAGE_MAP: dict[str, tuple[ConceptStatus, str, str]] = {
     ),
     "2_2_self_correction_reflection": (
         "implemented",
-        "Report Reflection Agent validates report rules and applies deterministic fixes with a configurable retry counter.",
-        "Add LLM-generated critique messages for each failed validation rule.",
+        "Report Reflection Agent validates required security report sections and authorized-source guardrails with a configurable retry counter.",
+        "Add LLM-generated critique messages for each failed security validation rule.",
     ),
     "2_3_dynamic_rules": (
         "implemented",
-        "Report word limits, top-k limits, provider selection, and report guardrails are config-driven and state-aware.",
-        "Allow users to choose different report rule profiles from the UI.",
+        "Report word limits, top-k limits, provider selection, human review, and security report guardrails are config-driven and state-aware.",
+        "Allow users to choose policy profiles such as PCI, FFIEC, or SOC 2 from the UI.",
     ),
     "2_4_inline_edit": (
         "implemented",
-        "Report Revision Agent applies targeted Markdown edits to the opening hook, body guardrails, and ## SOURCES section after report generation.",
-        "Expose user-selected revision targets such as hook-only, sources-only, or length-only edits.",
+        "Report Revision Agent applies targeted Markdown edits to required sections, source authority, policy mapping, and disclaimer blocks.",
+        "Expose user-selected revision targets such as findings-only, sources-only, or policy-only edits.",
     ),
     "3_1_codebase_rag": (
         "implemented",
-        "FAISS retrieval indexes uploaded documents and Tavily results for grounded context selection.",
-        "Add optional repository/code indexing for technical research tasks.",
+        "FAISS retrieval indexes uploaded logs, configs, advisories, and Tavily threat results for grounded security context selection.",
+        "Add repository-scale code indexing for large monorepos and SBOM inventories.",
     ),
     "3_2_orchestrator_state": (
         "implemented",
-        "ResearchState carries sub-questions, sources, tuned context, assessments, synthesis, insights, report, and logs across agents.",
-        "Persist state snapshots for comparison across runs.",
+        "ResearchState carries security questions, findings, policy gaps, incident steps, evaluation metrics, sources, reports, and logs across agents.",
+        "Persist state snapshots for longitudinal risk and eval comparison across runs.",
     ),
     "3_3_multi_agent": (
         "implemented",
-        "Specialized LangGraph nodes divide scope across planning, retrieval, validation, analysis, insight generation, and reporting.",
-        "Add a dedicated contradiction matrix agent.",
+        "Specialized LangGraph nodes divide scope across log monitoring, threat intelligence, vulnerability scanning, incident response, policy checking, and evaluation.",
+        "Add dedicated asset-inventory and secret-redaction agents.",
     ),
     "3_4_human_in_the_loop": (
         "implemented",
-        "Human Review Gate runs before Report Builder and can use LangGraph interrupt when REQUIRE_HUMAN_REVIEW is enabled.",
+        "Human Review Gate runs before Security Report Builder and can use LangGraph interrupt when REQUIRE_HUMAN_REVIEW is enabled.",
         "Add Streamlit resume controls for interactive interrupt approval.",
     ),
     "3_5_parallel_generation": (
         "implemented",
-        "Contextual Retriever runs parallel Tavily source lanes for papers, news, reports, and APIs before merging sources.",
-        "Use LangGraph Send/reducers for graph-native parallel branches.",
+        "Threat Intelligence Agent runs parallel Tavily source lanes for NVD, CVE.org, CISA KEV, MITRE, vendor advisories, and compliance guidance before merging sources.",
+        "Use LangGraph Send/reducers for graph-native parallel specialist branches.",
     ),
     "3_6_time_travel": (
         "implemented",

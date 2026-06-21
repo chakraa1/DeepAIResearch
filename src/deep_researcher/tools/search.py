@@ -1,4 +1,4 @@
-"""Web search integration for research agents."""
+"""Web search integration for cybersecurity agents."""
 
 from __future__ import annotations
 
@@ -9,10 +9,12 @@ from deep_researcher.main.models import SourceDocument
 
 
 SOURCE_SEARCH_QUERIES = {
-    "research_papers": "{query} research paper study arxiv pubmed scholarly evidence",
-    "news_articles": "{query} latest news article analysis Reuters AP BBC",
-    "reports": "{query} report whitepaper government industry pdf findings",
-    "apis": "{query} API dataset endpoint documentation data source",
+    "nvd_cve": "{query} site:nvd.nist.gov/vuln CVE CVSS affected versions",
+    "cve_org": "{query} site:cve.org CVE record vulnerability",
+    "cisa_kev": "{query} site:cisa.gov/known-exploited-vulnerabilities-catalog known exploited vulnerability KEV",
+    "mitre_attack": "{query} site:attack.mitre.org technique detection mitigation",
+    "vendor_advisories": "{query} vendor security advisory patch workaround",
+    "compliance_guidance": "{query} NIST CSF ISO 27001 SOC 2 security controls guidance",
 }
 
 
@@ -31,7 +33,8 @@ def tavily_search(
                 title=f"Tavily API key not configured for {source_lane}",
                 content=(
                     "Web search was skipped because TAVILY_API_KEY is not set. "
-                    "Add a Tavily key in the environment or upload local source "
+                    "Add a Tavily key in the environment or upload authorized "
+                    "NVD, CVE.org, CISA, MITRE, vendor advisory, and policy "
                     "documents to run a fully grounded investigation. "
                     f"Skipped source lane: {source_lane}."
                 ),
